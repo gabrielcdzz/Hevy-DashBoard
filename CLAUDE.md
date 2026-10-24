@@ -29,7 +29,7 @@ mvn test                                               # todos os testes
 mvn test -Dtest=HevyClientTest                         # uma classe
 mvn test -Dtest=HevyJsonTest#leEventoDeTreinoApagado   # um método
 mvn package                                            # gera target/hevy-dashboard-0.1.0-SNAPSHOT.jar (fat jar via shade)
-java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar     # precisa de HEVY_API_KEY no ambiente
+java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar     # precisa de HEVY_API_KEY, GOOGLE_APPLICATION_CREDENTIALS e SPREADSHEET_ID
 ```
 
 ## Convenções de código
@@ -41,7 +41,9 @@ java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar     # precisa de HEVY_API_KEY
 
 ## Arquitetura
 
-Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I/O**, para ser testável isoladamente) e `sheets` (Google Sheets, via conta de serviço). Hoje só `client`, `model` e `service` existem.
+Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I/O**, para ser testável isoladamente) e `sheets` (Google Sheets, via conta de serviço). Hoje `sheets` só tem a conexão (`SheetsClient.fromEnvironment`, título e abas da planilha); a escrita das abas vem a seguir.
+
+- `sheets/SheetsClient`: autentica com `ServiceAccountCredentials` (do `google-auth-library`, que já vem com o `google-api-client`). Lê o caminho do JSON em `GOOGLE_APPLICATION_CREDENTIALS` e o ID em `SPREADSHEET_ID`. Toda chamada passa por `execute`, que transforma 403 e 404 em `SheetsException` com uma mensagem que diz o que corrigir. No GitHub Actions, o secret com o JSON será gravado num arquivo temporário apontado pela mesma variável.
 
 - `service/VolumeCalculator`: recebe templates e `VolumeRules` (músculos com indireta e agrupamento) no construtor. `volumeOf(exercícios)` devolve `Map<músculo, MuscleVolume>`, e `weeklyVolume(treinos, zona)` agrupa por segunda-feira (`Weeks.startOf`). Template desconhecido lança `IllegalArgumentException` em vez de contar errado.
 - `src/test/resources/fixtures/`: as 5 rotinas reais e os 22 templates delas, salvos da API em 24/10/2026. São a base do teste que confere os números de `docs/contexto.md`. Se as rotinas mudarem no Hevy, a fixture e os números esperados mudam juntos.

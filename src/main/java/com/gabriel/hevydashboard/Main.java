@@ -5,12 +5,14 @@ import com.gabriel.hevydashboard.client.HevyClient;
 import com.gabriel.hevydashboard.model.Exercise;
 import com.gabriel.hevydashboard.model.ExerciseTemplate;
 import com.gabriel.hevydashboard.model.Routine;
+import com.gabriel.hevydashboard.sheets.SheetsClient;
+import com.gabriel.hevydashboard.sheets.SheetsException;
 
 import java.util.List;
 
 /**
- * Ponto de entrada. Nesta etapa faz só um teste de conexão com o Hevy:
- * confere a chave, lê as rotinas e os exercícios. A sincronização completa vem nas próximas etapas.
+ * Ponto de entrada. Nesta etapa faz só um teste de conexão: confere a chave do Hevy, lê as rotinas
+ * e os exercícios, e abre a planilha do Google Sheets. A sincronização completa vem nas próximas etapas.
  */
 public class Main {
 
@@ -38,7 +40,11 @@ public class Main {
                     .limit(3)
                     .forEach(t -> System.out.println("  exemplo de exercício em rotina: " + t));
 
-        } catch (HevyApiException | IllegalStateException e) {
+            SheetsClient sheets = SheetsClient.fromEnvironment();
+            System.out.println("Planilha: " + sheets.spreadsheetTitle());
+            System.out.println("Abas: " + sheets.sheetTitles());
+
+        } catch (HevyApiException | SheetsException | IllegalStateException e) {
             System.err.println("Erro: " + e.getMessage());
             System.exit(1);
         }

@@ -97,7 +97,7 @@ A soma das diretas (76) é igual ao total de séries de trabalho, e isso deve va
 
 - Cliente do Hevy, mapeamento JSON e modelos prontos, com testes passando.
 - **Conexão real confirmada (24/10/2026):** o jar devolveu 800 treinos, 5 rotinas e 456 templates. As séries de cada rotina (PULL 2: 28, PUSH 2: 24, LEGS: 25, PULL: 27, PUSH: 23) batem com o `set_count` do Hevy. O mapeamento do JSON está validado.
-- Ainda **não** existe projeto no Google Cloud, conta de serviço nem planilha.
+- Google Cloud configurado: credencial em `secrets/service-account.json` (ignorada pelo Git), variáveis `GOOGLE_APPLICATION_CREDENTIALS` e `SPREADSHEET_ID` definidas com `setx`. A planilha ainda está vazia.
 
 ## 4. Estrutura planejada da planilha (Google Sheets)
 
@@ -143,7 +143,7 @@ As abas `volume_*` nunca devem ser editadas à mão, porque o script as sobrescr
 2. ~~**Cálculo de volume (`service`)**~~ (feito em 24/10/2026, `VolumeCalculatorTest` e `WeeksTest` passando):
    - regra de série válida, contagem direta e indireta, ajustes manuais, semana de segunda a domingo em America/Sao_Paulo
    - testes JUnit, incluindo um teste com as 5 rotinas que confira **exatamente** os números da seção 2, mais casos de borda: treino no domingo à noite em UTC, dropset e falha contam, aquecimento não conta, indireta só para bíceps e tríceps, dorsal e costas superiores agrupados
-3. **Configurar o Google Cloud** (o usuário faz, com o Claude guiando passo a passo): criar o projeto, ativar a Google Sheets API, criar a conta de serviço, baixar a credencial JSON (que nunca vai para o repositório; deve ficar em `secrets/`), criar a planilha e compartilhar com o e-mail da conta de serviço.
+3. ~~**Configurar o Google Cloud**~~ (feito em 24/10/2026; projeto `hevy-dashboard-512621`, conta de serviço `hevy-sync`, planilha "Hevy Dashboard", acesso confirmado pelo `Main`) (o usuário faz, com o Claude guiando passo a passo): criar o projeto, ativar a Google Sheets API, criar a conta de serviço, baixar a credencial JSON (que nunca vai para o repositório; deve ficar em `secrets/`), criar a planilha e compartilhar com o e-mail da conta de serviço.
 4. **Pacote `sheets`:** criar as abas se não existirem, escrever as séries brutas, ler `ajustes_manuais` e `config`, escrever as abas `volume_*`.
 5. **Orquestração (`SyncService` + `Main`):** importação completa na primeira vez, depois incremental, conforme a seção 5.
 6. **Workflow do GitHub Actions** e cadastro dos secrets.
