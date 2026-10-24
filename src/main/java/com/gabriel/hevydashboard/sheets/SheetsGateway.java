@@ -24,6 +24,18 @@ public interface SheetsGateway {
     /** Todas as linhas da aba, como texto. Aba vazia devolve lista vazia. */
     List<List<String>> readRows(String sheet);
 
+    /** Uma coluna da aba (0 = A), uma posição por linha, com "" nas células vazias. */
+    List<String> readColumn(String sheet, int column);
+
     /** Apaga o conteúdo da aba e grava as linhas a partir de A1. */
     void replaceRows(String sheet, List<List<Object>> rows, InputMode mode);
+
+    /** Acrescenta as linhas no fim da aba, sem mexer no que já existe. */
+    void appendRows(String sheet, List<List<Object>> rows, InputMode mode);
+
+    /**
+     * Remove linhas da aba, deslocando as de baixo para cima.
+     * Os índices começam em 0 (a primeira linha da aba, normalmente o cabeçalho, é a 0).
+     */
+    void deleteRows(String sheet, Collection<Integer> rowIndexes);
 }

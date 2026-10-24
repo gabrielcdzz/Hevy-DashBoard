@@ -97,6 +97,8 @@ A soma das diretas (76) é igual ao total de séries de trabalho, e isso deve va
 
 - Cliente do Hevy, mapeamento JSON e modelos prontos, com testes passando.
 - **Conexão real confirmada (24/10/2026):** o jar devolveu 800 treinos, 5 rotinas e 456 templates. As séries de cada rotina (PULL 2: 28, PUSH 2: 24, LEGS: 25, PULL: 27, PUSH: 23) batem com o `set_count` do Hevy. O mapeamento do JSON está validado.
+- **Dados reais do histórico (24/10/2026):** 800 treinos e 14.799 séries (12.390 de trabalho, 2.409 de aquecimento, nenhum `failure` nem `dropset`). Títulos dos treinos: `TREINO A` a `TREINO E` (os antigos) e `PUSH`, `PUSH 2`, `PULL`, `PULL 2`, `LEGS` (os atuais); a coluna `rotina` usa o título do treino. 239 séries não têm carga (peso corporal) e 20 não têm repetições. **Nenhuma série tem RPE**, então "RPE médio" da segunda fase não é viável enquanto o RPE não for preenchido no Hevy. O endpoint de eventos devolveu 803 eventos (800 `updated` e 3 `deleted`).
+- A aba `series_treinos` da planilha real já foi preenchida com os 800 treinos (14.799 linhas). A `estado_sync` segue vazia de propósito: a primeira sincronização completa refaz a importação, sem duplicar.
 - Google Cloud configurado: credencial em `secrets/service-account.json` (ignorada pelo Git), variáveis `GOOGLE_APPLICATION_CREDENTIALS` e `SPREADSHEET_ID` definidas com `setx`. A planilha ainda está vazia.
 
 ## 4. Estrutura planejada da planilha (Google Sheets)
@@ -144,7 +146,7 @@ As abas `volume_*` nunca devem ser editadas à mão, porque o script as sobrescr
    - regra de série válida, contagem direta e indireta, ajustes manuais, semana de segunda a domingo em America/Sao_Paulo
    - testes JUnit, incluindo um teste com as 5 rotinas que confira **exatamente** os números da seção 2, mais casos de borda: treino no domingo à noite em UTC, dropset e falha contam, aquecimento não conta, indireta só para bíceps e tríceps, dorsal e costas superiores agrupados
 3. ~~**Configurar o Google Cloud**~~ (feito em 24/10/2026; projeto `hevy-dashboard-512621`, conta de serviço `hevy-sync`, planilha "Hevy Dashboard", acesso confirmado pelo `Main`) (o usuário faz, com o Claude guiando passo a passo): criar o projeto, ativar a Google Sheets API, criar a conta de serviço, baixar a credencial JSON (que nunca vai para o repositório; deve ficar em `secrets/`), criar a planilha e compartilhar com o e-mail da conta de serviço.
-4. **Pacote `sheets`:** criar as abas se não existirem, escrever as séries brutas, ler `ajustes_manuais` e `config`, escrever as abas `volume_*`.
+4. **Pacote `sheets`:** criar as abas se não existirem, escrever as séries brutas, ler `ajustes_manuais` e `config`, escrever as abas `volume_*`. Feito: conexão, `SyncState`, `series_treinos`. Falta: `series_rotinas`, `ajustes_manuais`, `config`, `volume_semanal`, `volume_rotinas`.
 5. **Orquestração (`SyncService` + `Main`):** importação completa na primeira vez, depois incremental, conforme a seção 5.
 6. **Workflow do GitHub Actions** e cadastro dos secrets.
 7. **Looker Studio, aba Visão geral:** diretas e indiretas por músculo × faixa-alvo, semana atual × anterior, treinos por semana, sequência de semanas completas, calendário de calor, duração média.

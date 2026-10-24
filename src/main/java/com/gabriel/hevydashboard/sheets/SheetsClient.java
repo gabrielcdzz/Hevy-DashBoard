@@ -8,6 +8,8 @@ import com.google.api.services.sheets.v4.SheetsScopes;
 import com.google.api.services.sheets.v4.model.AddSheetRequest;
 import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
 import com.google.api.services.sheets.v4.model.ClearValuesRequest;
+import com.google.api.services.sheets.v4.model.DeleteDimensionRequest;
+import com.google.api.services.sheets.v4.model.DimensionRange;
 import com.google.api.services.sheets.v4.model.Request;
 import com.google.api.services.sheets.v4.model.Sheet;
 import com.google.api.services.sheets.v4.model.SheetProperties;
@@ -21,7 +23,9 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -117,12 +121,27 @@ public class SheetsClient implements SheetsGateway {
     }
 
     @Override
+    public List<String> readColumn(String sheet, int column) {
+        char letter = (char) ('A' + column);
+        ValueRange range = execute(() -> sheets.spreadsheets().values()
+                .get(spreadsheetId, quoted(sheet) + "!" + letter + ":" + letter)
+                .execute());
+        if (range.getValues() == null) {
+            return List.of();
+        }
+        // A API devolve [] para célula vazia no meio da coluna; a posição precisa ser mantida.
+        return range.getValues().stream()
+                .map(row -> row.isEmpty() ? "" : String.valueOf(row.get(0)))
+                .toList();
+    }
+
+    @Override
     public void replaceRows(String sheet, List<List<Object>> rows, InputMode mode) {
         execute(() -> sheets.spreadsheets().values()
                 .clear(spreadsheetId, quoted(sheet), new ClearValuesRequest())
                 .execute());
 
-        String valueInputOption = mode == InputMode.RAW ? "RAW" : "USER_ENTERED";
+        String valueInputOption = inputOption(mode);
         for (int start = 0; start < rows.size(); start += ROWS_PER_WRITE) {
             List<List<Object>> chunk = rows.subList(start, Math.min(start + ROWS_PER_WRITE, rows.size()));
             String firstCell = quoted(sheet) + "!A" + (start + 1);
@@ -131,6 +150,48 @@ public class SheetsClient implements SheetsGateway {
                     .setValueInputOption(valueInputOption)
                     .execute());
         }
+    }
+
+    @Override
+    public void appendRows(String sheet, List<List<Object>> rows, InputMode mode) {
+        String valueInputOption = inputOption(mode);
+        for (int start = 0; start < rows.size(); start += ROWS_PER_WRITE) {
+            List<List<Object>> chunk = rows.subList(start, Math.min(start + ROWS_PER_WRITE, rows.size()));
+            execute(() -> sheets.spreadsheets().values()
+                    .append(spreadsheetId, quoted(sheet) + "!A1", new ValueRange().setValues(chunk))
+                    .setValueInputOption(valueInputOption)
+                    .setInsertDataOption("INSERT_ROWS")
+                    .execute());
+        }
+    }
+
+    @Override
+    public void deleteRows(String sheet, Collection<Integer> rowIndexes) {
+        if (rowIndexes.isEmpty()) {
+            return;
+        }
+        int sheetId = sheetId(sheet);
+
+        // De baixo para cima: apagar uma linha desloca as de baixo, e assim os índices ainda valem.
+        List<Integer> descending = rowIndexes.stream().distinct().sorted(Comparator.reverseOrder()).toList();
+        List<Request> requests = new ArrayList<>();
+        int end = descending.get(0);
+        int start = end;
+        for (int i = 1; i < descending.size(); i++) {
+            int row = descending.get(i);
+            if (row == start - 1) {
+                start = row;
+            } else {
+                requests.add(deleteRange(sheetId, start, end));
+                start = row;
+                end = row;
+            }
+        }
+        requests.add(deleteRange(sheetId, start, end));
+
+        execute(() -> sheets.spreadsheets()
+                .batchUpdate(spreadsheetId, new BatchUpdateSpreadsheetRequest().setRequests(requests))
+                .execute());
     }
 
     // ------------------------------------------------------------------
@@ -157,6 +218,32 @@ public class SheetsClient implements SheetsGateway {
         } catch (IOException e) {
             throw new SheetsException("Falha de rede ao chamar o Google Sheets", -1, e);
         }
+    }
+
+    private int sheetId(String title) {
+        Spreadsheet spreadsheet = execute(() -> sheets.spreadsheets().get(spreadsheetId)
+                .setFields("sheets.properties(sheetId,title)")
+                .execute());
+        return spreadsheet.getSheets().stream()
+                .map(Sheet::getProperties)
+                .filter(p -> title.equals(p.getTitle()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Aba não encontrada: " + title))
+                .getSheetId();
+    }
+
+    /** Pedido para apagar as linhas de {@code first} a {@code last}, ambas inclusive. */
+    private static Request deleteRange(int sheetId, int first, int last) {
+        return new Request().setDeleteDimension(new DeleteDimensionRequest().setRange(
+                new DimensionRange()
+                        .setSheetId(sheetId)
+                        .setDimension("ROWS")
+                        .setStartIndex(first)
+                        .setEndIndex(last + 1)));
+    }
+
+    private static String inputOption(InputMode mode) {
+        return mode == InputMode.RAW ? "RAW" : "USER_ENTERED";
     }
 
     /** Nome da aba entre aspas simples, como o Sheets exige quando há espaço ou acento. */
