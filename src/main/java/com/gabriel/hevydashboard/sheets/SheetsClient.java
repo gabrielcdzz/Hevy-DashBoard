@@ -121,6 +121,29 @@ public class SheetsClient implements SheetsGateway {
     }
 
     @Override
+    public List<List<Object>> readTypedRows(String sheet) {
+        ValueRange range = execute(() -> sheets.spreadsheets().values()
+                .get(spreadsheetId, quoted(sheet))
+                .setValueRenderOption("UNFORMATTED_VALUE")
+                .execute());
+        if (range.getValues() == null) {
+            return List.of();
+        }
+        return range.getValues().stream().map(row -> (List<Object>) new ArrayList<>(row)).toList();
+    }
+
+    @Override
+    public List<String> readFirstRow(String sheet) {
+        ValueRange range = execute(() -> sheets.spreadsheets().values()
+                .get(spreadsheetId, quoted(sheet) + "!1:1")
+                .execute());
+        if (range.getValues() == null || range.getValues().isEmpty()) {
+            return List.of();
+        }
+        return range.getValues().get(0).stream().map(String::valueOf).toList();
+    }
+
+    @Override
     public List<String> readColumn(String sheet, int column) {
         char letter = (char) ('A' + column);
         ValueRange range = execute(() -> sheets.spreadsheets().values()

@@ -9,10 +9,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -56,18 +54,8 @@ public class VolumeCalculator {
             }
             ExerciseTemplate template = templateOf(exercise);
 
-            String primary = rules.groupOf(template.primaryMuscleGroup());
-            volume.merge(primary, new MuscleVolume(workingSets, 0), MuscleVolume::plus);
-
-            // Set: "lats" e "upper_back" no mesmo exercício viram "back" uma vez só.
-            Set<String> secondaries = new LinkedHashSet<>();
-            template.secondaryMuscleGroups().forEach(m -> secondaries.add(rules.groupOf(m)));
-            secondaries.remove(primary);
-            for (String secondary : secondaries) {
-                if (rules.countsIndirect(secondary)) {
-                    volume.merge(secondary, new MuscleVolume(0, workingSets), MuscleVolume::plus);
-                }
-            }
+            rules.contribution(template.primaryMuscleGroup(), template.secondaryMuscleGroups(), workingSets)
+                    .forEach((muscle, contribution) -> volume.merge(muscle, contribution, MuscleVolume::plus));
         }
         return volume;
     }

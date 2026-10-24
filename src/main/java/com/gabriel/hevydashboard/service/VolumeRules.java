@@ -1,5 +1,8 @@
 package com.gabriel.hevydashboard.service;
 
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -30,5 +33,27 @@ public record VolumeRules(Set<String> indirectMuscles, Map<String, String> muscl
 
     public boolean countsIndirect(String group) {
         return indirectMuscles.contains(group);
+    }
+
+    /**
+     * Quanto {@code sets} séries de trabalho de um exercício valem para cada grupo muscular:
+     * direta para o grupo do músculo primário e indireta para cada grupo secundário permitido.
+     * Um grupo recebe indireta no máximo uma vez, e nunca do exercício em que ele é o primário.
+     */
+    public Map<String, MuscleVolume> contribution(String primaryMuscle, Collection<String> secondaryMuscles, int sets) {
+        Map<String, MuscleVolume> result = new LinkedHashMap<>();
+        String primary = groupOf(primaryMuscle);
+        result.put(primary, new MuscleVolume(sets, 0));
+
+        // Set: "lats" e "upper_back" no mesmo exercício viram "back" uma vez só.
+        Set<String> secondaries = new LinkedHashSet<>();
+        secondaryMuscles.forEach(muscle -> secondaries.add(groupOf(muscle)));
+        secondaries.remove(primary);
+        for (String secondary : secondaries) {
+            if (countsIndirect(secondary)) {
+                result.put(secondary, new MuscleVolume(0, sets));
+            }
+        }
+        return result;
     }
 }

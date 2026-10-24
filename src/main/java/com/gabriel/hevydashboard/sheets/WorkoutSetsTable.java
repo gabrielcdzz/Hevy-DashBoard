@@ -1,17 +1,16 @@
 package com.gabriel.hevydashboard.sheets;
 
-import com.gabriel.hevydashboard.model.Exercise;
 import com.gabriel.hevydashboard.model.ExerciseTemplate;
-import com.gabriel.hevydashboard.model.SetEntry;
 import com.gabriel.hevydashboard.model.Workout;
 import com.gabriel.hevydashboard.model.WorkoutEvent;
-import com.gabriel.hevydashboard.service.VolumeCalculator;
-import com.gabriel.hevydashboard.service.Weeks;
+import com.gabriel.hevydashboard.service.SetRecord;
+import com.gabriel.hevydashboard.service.SetRecords;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -29,7 +28,8 @@ import java.util.stream.Collectors;
  * e o volume é recalculado a partir daqui, sem perder histórico.
  * <p>
  * A atualização é incremental: apaga só as linhas dos treinos que mudaram e acrescenta as novas.
- * As demais linhas nunca são relidas nem regravadas.
+ * As demais linhas nunca são relidas nem regravadas. Para calcular as métricas, {@link #readAll()}
+ * lê a aba inteira sem formatação.
  */
 public class WorkoutSetsTable {
 
@@ -37,9 +37,26 @@ public class WorkoutSetsTable {
 
     public static final List<Object> HEADER = List.of(
             "workout_id", "data", "semana_inicio", "rotina", "exercicio", "template_id",
-            "musculo_primario", "musculos_secundarios", "tipo_serie", "valida", "carga_kg", "reps", "rpe");
+            "musculo_primario", "musculos_secundarios", "tipo_serie", "valida", "carga_kg", "reps", "rpe",
+            "duracao_min");
 
-    private static final int WORKOUT_ID_COLUMN = 0;
+    private static final int WORKOUT_ID = 0;
+    private static final int DATE = 1;
+    private static final int WEEK = 2;
+    private static final int TITLE = 3;
+    private static final int EXERCISE = 4;
+    private static final int TEMPLATE_ID = 5;
+    private static final int PRIMARY = 6;
+    private static final int SECONDARY = 7;
+    private static final int TYPE = 8;
+    private static final int VALID = 9;
+    private static final int WEIGHT = 10;
+    private static final int REPS = 11;
+    private static final int RPE = 12;
+    private static final int DURATION = 13;
+
+    /** O Sheets conta as datas em dias desde 30/12/1899. */
+    private static final LocalDate SHEETS_EPOCH = LocalDate.of(1899, 12, 30);
 
     private final SheetsGateway gateway;
     private final Map<String, ExerciseTemplate> templatesById;
@@ -77,10 +94,12 @@ public class WorkoutSetsTable {
         }
 
         gateway.ensureSheets(List.of(SHEET));
-        List<String> workoutIds = gateway.readColumn(SHEET, WORKOUT_ID_COLUMN);
+        List<String> workoutIds = gateway.readColumn(SHEET, WORKOUT_ID);
         if (workoutIds.isEmpty()) {
             gateway.replaceRows(SHEET, List.of(HEADER), SheetsGateway.InputMode.RAW);
             workoutIds = List.of("workout_id");
+        } else {
+            requireCurrentHeader(gateway.readFirstRow(SHEET));
         }
 
         Set<String> affected = new HashSet<>(latestById.keySet());
@@ -100,47 +119,78 @@ public class WorkoutSetsTable {
         return new Result(toWrite.size(), removed, rowsToDelete.size(), newRows.size());
     }
 
+    /** Todas as séries da aba. Aba vazia (ou só com o cabeçalho) devolve lista vazia. */
+    public List<SetRecord> readAll() {
+        gateway.ensureSheets(List.of(SHEET));
+        List<List<Object>> rows = gateway.readTypedRows(SHEET);
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+        requireCurrentHeader(rows.get(0).stream().map(String::valueOf).toList());
+        return rows.stream().skip(1)
+                .filter(row -> !row.isEmpty() && !text(row, WORKOUT_ID).isEmpty())
+                .map(WorkoutSetsTable::fromRow)
+                .toList();
+    }
+
     /** As linhas de um treino: uma por série, na ordem do treino. */
     public List<List<Object>> rowsOf(Workout workout) {
-        LocalDate date = workout.startTime().atZoneSameInstant(zone).toLocalDate();
-        LocalDate week = Weeks.startOf(workout.startTime(), zone);
+        return SetRecords.of(workout, templatesById, zone).stream()
+                .map(WorkoutSetsTable::toRow)
+                .toList();
+    }
 
-        List<List<Object>> rows = new ArrayList<>();
-        for (Exercise exercise : workout.exercises()) {
-            ExerciseTemplate template = templateOf(exercise);
-            String secondary = String.join(", ", template.secondaryMuscleGroups());
-            for (SetEntry set : exercise.sets()) {
-                rows.add(List.of(
-                        workout.id(),
-                        date.toString(),
-                        week.toString(),
-                        nullToEmpty(workout.title()),
-                        exercise.title(),
-                        exercise.exerciseTemplateId(),
-                        template.primaryMuscleGroup(),
-                        secondary,
-                        set.type(),
-                        VolumeCalculator.isWorkingSet(set),
-                        nullToEmpty(set.weightKg()),
-                        nullToEmpty(set.reps()),
-                        nullToEmpty(set.rpe())));
-            }
-        }
-        return rows;
+    static List<Object> toRow(SetRecord set) {
+        return Arrays.asList(
+                set.workoutId(),
+                set.date().toString(),
+                set.week().toString(),
+                set.workoutTitle(),
+                set.exercise(),
+                set.templateId(),
+                set.primaryMuscle(),
+                String.join(", ", set.secondaryMuscles()),
+                set.type(),
+                set.valid(),
+                emptyIfNull(set.weightKg()),
+                emptyIfNull(set.reps()),
+                emptyIfNull(set.rpe()),
+                emptyIfNull(set.durationMinutes()));
+    }
+
+    /**
+     * Lê uma linha como o Sheets a devolve sem formatação: data como número de dias, mas também aceita
+     * texto no formato 2026-10-24, e número ou texto nas colunas numéricas.
+     */
+    static SetRecord fromRow(List<Object> row) {
+        String secondary = text(row, SECONDARY);
+        return new SetRecord(
+                text(row, WORKOUT_ID),
+                date(row, DATE),
+                date(row, WEEK),
+                text(row, TITLE),
+                integerOrNull(row, DURATION),
+                text(row, EXERCISE),
+                text(row, TEMPLATE_ID),
+                text(row, PRIMARY),
+                secondary.isEmpty() ? List.of() : Arrays.stream(secondary.split(",")).map(String::trim).toList(),
+                text(row, TYPE),
+                bool(row, VALID),
+                doubleOrNull(row, WEIGHT),
+                integerOrNull(row, REPS),
+                doubleOrNull(row, RPE));
     }
 
     /** Resultado de uma atualização, para o log. */
     public record Result(int workoutsWritten, int workoutsRemoved, int rowsDeleted, int rowsAppended) {
     }
 
-    private ExerciseTemplate templateOf(Exercise exercise) {
-        ExerciseTemplate template = templatesById.get(exercise.exerciseTemplateId());
-        if (template == null) {
-            throw new IllegalArgumentException("O exercício \"" + exercise.title() + "\" usa o template "
-                    + exercise.exerciseTemplateId() + ", que não está na lista de templates. "
-                    + "Pode ser um exercício personalizado que foi apagado no Hevy.");
+    private static void requireCurrentHeader(List<String> header) {
+        if (!header.equals(HEADER.stream().map(String::valueOf).toList())) {
+            throw new IllegalStateException("A aba " + SHEET + " tem colunas diferentes das esperadas (versão antiga?). "
+                    + "Apague todo o conteúdo dela e o valor de ultima_sync na aba estado_sync, "
+                    + "e rode de novo para importar o histórico.");
         }
-        return template;
     }
 
     private static OffsetDateTime momentOf(WorkoutEvent event) {
@@ -148,7 +198,43 @@ public class WorkoutSetsTable {
     }
 
     /** O Sheets recebe "" nas células vazias; null viraria um valor estranho no JSON. */
-    private static Object nullToEmpty(Object value) {
+    private static Object emptyIfNull(Object value) {
         return value == null ? "" : value;
+    }
+
+    // ------------------------------------------------------------------
+    // Leitura de células
+    // ------------------------------------------------------------------
+
+    private static String text(List<Object> row, int column) {
+        Object value = column < row.size() ? row.get(column) : null;
+        return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    private static LocalDate date(List<Object> row, int column) {
+        Object value = column < row.size() ? row.get(column) : null;
+        if (value instanceof Number number) {
+            return SHEETS_EPOCH.plusDays(number.longValue());
+        }
+        return LocalDate.parse(text(row, column));
+    }
+
+    private static boolean bool(List<Object> row, int column) {
+        Object value = column < row.size() ? row.get(column) : null;
+        return value instanceof Boolean b ? b : "true".equalsIgnoreCase(text(row, column));
+    }
+
+    private static Double doubleOrNull(List<Object> row, int column) {
+        Object value = column < row.size() ? row.get(column) : null;
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        String text = text(row, column);
+        return text.isEmpty() ? null : Double.valueOf(text);
+    }
+
+    private static Integer integerOrNull(List<Object> row, int column) {
+        Double value = doubleOrNull(row, column);
+        return value == null ? null : (int) Math.round(value);
     }
 }

@@ -180,4 +180,10 @@ Arquitetura nova: Hevy API → Java (sincronização e cálculo) → Google Shee
 
 **Privacidade (repositório e site públicos):** dados reais de treino nunca entram em commit. O arquivo de dados do site é gerado pelo Actions e publicado como artefato do Pages, fora do histórico do Git. Publicar os treinos reais num site público expõe datas, exercícios e cargas, então isso exige confirmação do usuário antes de ligar. O site deve funcionar também com dados de exemplo, para servir de portfólio. As fixtures de `src/test/resources/fixtures/` já mostram as rotinas atuais.
 
-**Decisões técnicas ainda abertas:** de onde o Java lê o histórico para montar os dados do site (reler a aba `series_treinos` com valores sem formatação ou rebuscar os treinos no Hevy), e qual biblioteca de gráficos usar no front.
+**Decidido: a planilha é o armazenamento.** A sincronização incremental só traz o que mudou, então o histórico completo vem de reler a aba `series_treinos` com valores sem formatação (datas como número de série). As métricas recebem `SetRecord`s e não sabem de onde eles vêm. Para a duração média dos treinos, a aba ganhou a coluna `duracao_min`.
+
+**Dados reais (24/10/2026):** histórico de 27/02/2023 a 24/10/2026, 800 treinos, duração média de 91 minutos. Na semana de 12/10: bíceps 12 diretas (11 indiretas), ombros 12, costas 11, tríceps 8 (5), peito 7.
+
+**Próxima versão (fora do escopo atual):** sistema com contas e login para outras pessoas conectarem o próprio Hevy. A API do Hevy não tem OAuth, só chave pessoal (exige Hevy Pro), então isso pede backend, banco de dados e guarda criptografada das chaves. O `HevyClient` e as métricas já não dependem de uma chave fixa nem da planilha, para facilitar essa fase.
+
+**Decisão técnica ainda aberta:** qual biblioteca de gráficos usar no front.

@@ -24,6 +24,16 @@ public interface SheetsGateway {
     /** Todas as linhas da aba, como texto. Aba vazia devolve lista vazia. */
     List<List<String>> readRows(String sheet);
 
+    /**
+     * Todas as linhas com os valores como o Sheets os guarda, sem formatação: números e datas chegam
+     * como número (data = dias desde 30/12/1899), texto como texto e verdadeiro/falso como booleano.
+     * É a leitura certa para dados que o programa vai interpretar, porque não depende do idioma da planilha.
+     */
+    List<List<Object>> readTypedRows(String sheet);
+
+    /** A primeira linha da aba (normalmente o cabeçalho), como texto. Aba vazia devolve lista vazia. */
+    List<String> readFirstRow(String sheet);
+
     /** Uma coluna da aba (0 = A), uma posição por linha, com "" nas células vazias. */
     List<String> readColumn(String sheet, int column);
 

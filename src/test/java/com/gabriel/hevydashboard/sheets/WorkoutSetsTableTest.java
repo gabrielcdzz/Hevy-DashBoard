@@ -5,14 +5,20 @@ import com.gabriel.hevydashboard.model.ExerciseTemplate;
 import com.gabriel.hevydashboard.model.SetEntry;
 import com.gabriel.hevydashboard.model.Workout;
 import com.gabriel.hevydashboard.model.WorkoutEvent;
+import com.gabriel.hevydashboard.service.SetRecord;
+import com.gabriel.hevydashboard.service.SetRecords;
 import com.gabriel.hevydashboard.service.Weeks;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -39,10 +45,11 @@ class WorkoutSetsTableTest {
         List<List<Object>> linhas = tabela.rowsOf(treino);
 
         assertEquals(2, linhas.size());
+        // A última coluna é a duração do treino em minutos (o helper treino() usa 1 hora).
         assertEquals(List.of("w1", "2026-10-25", "2026-10-19", "PUSH", "Supino Reto", "supino",
-                "chest", "triceps, shoulders", "warmup", false, 20.0, 12, ""), linhas.get(0));
+                "chest", "triceps, shoulders", "warmup", false, 20.0, 12, "", 60), linhas.get(0));
         assertEquals(List.of("w1", "2026-10-25", "2026-10-19", "PUSH", "Supino Reto", "supino",
-                "chest", "triceps, shoulders", "normal", true, 60.0, 8, ""), linhas.get(1));
+                "chest", "triceps, shoulders", "normal", true, 60.0, 8, "", 60), linhas.get(1));
     }
 
     @Test
@@ -144,6 +151,61 @@ class WorkoutSetsTableTest {
         tabela.applyEvents(eventos);
 
         assertEquals(3, planilha.sheets.get(WorkoutSetsTable.SHEET).size());
+    }
+
+    // ------------------------------------------------------------------
+    // Leitura de volta
+    // ------------------------------------------------------------------
+
+    @Test
+    void lerDeVoltaDevolveAsMesmasSeriesQueForamGravadas() {
+        Workout treino = treino("w1", "PUSH", "2026-10-26T01:00:00Z", "2026-10-26T01:00:00Z",
+                exercicio("supino", "Supino Reto", serie("warmup", 20.0, 12), serie("normal", 60.0, 8)),
+                exercicio("flexao", "Flexão", serie("normal", null, null)));
+        tabela.applyEvents(List.of(atualizado(treino)));
+
+        List<SetRecord> lidas = tabela.readAll();
+
+        assertEquals(SetRecords.of(treino, Map.of("supino", SUPINO, "flexao", FLEXAO), Weeks.SAO_PAULO), lidas);
+    }
+
+    @Test
+    void abaVaziaOuSoComCabecalhoNaoTemSeries() {
+        assertTrue(tabela.readAll().isEmpty());
+    }
+
+    @Test
+    void fromRowEntendeADataComoNumeroDeSerieDoSheets() {
+        // É assim que o Google devolve a leitura sem formatação: 46319 = 24/10/2026 e 46314 = 19/10/2026.
+        List<Object> linha = List.of("w1", new BigDecimal("46319"), new BigDecimal("46314"), "PULL 2",
+                "Puxada Alta", "473CF5B8", "lats", "upper_back, biceps", "normal", true,
+                new BigDecimal("40"), new BigDecimal("12"), "", new BigDecimal("96"));
+
+        SetRecord serie = WorkoutSetsTable.fromRow(linha);
+
+        assertEquals(LocalDate.of(2026, 10, 24), serie.date());
+        assertEquals(LocalDate.of(2026, 10, 19), serie.week());
+        assertEquals(List.of("upper_back", "biceps"), serie.secondaryMuscles());
+        assertEquals(40.0, serie.weightKg());
+        assertEquals(12, serie.reps());
+        assertEquals(96, serie.durationMinutes());
+        assertTrue(serie.valid());
+        assertNull(serie.rpe());
+    }
+
+    @Test
+    void cabecalhoAntigoDaErroQueExplicaComoRecomecar() {
+        planilha.ensureSheets(List.of(WorkoutSetsTable.SHEET));
+        planilha.replaceRows(WorkoutSetsTable.SHEET, List.of(List.of("workout_id", "data")),
+                SheetsGateway.InputMode.RAW);
+
+        IllegalStateException naLeitura = assertThrows(IllegalStateException.class, tabela::readAll);
+        IllegalStateException naAtualizacao = assertThrows(IllegalStateException.class, () -> tabela.applyEvents(List.of(
+                atualizado(treino("w1", "PUSH", "2026-10-21T15:00:00Z", "2026-10-21T15:00:00Z",
+                        exercicio("supino", "Supino Reto", serie("normal", 60.0, 8)))))));
+
+        assertTrue(naLeitura.getMessage().contains("estado_sync"));
+        assertTrue(naAtualizacao.getMessage().contains("estado_sync"));
     }
 
     // ------------------------------------------------------------------

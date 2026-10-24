@@ -22,6 +22,18 @@ class InMemorySheets implements SheetsGateway {
         return List.copyOf(rowsOf(sheet));
     }
 
+    /** A planilha falsa guarda texto; o Google devolveria números e datas, e o código aceita os dois. */
+    @Override
+    public List<List<Object>> readTypedRows(String sheet) {
+        return rowsOf(sheet).stream().map(row -> (List<Object>) List.<Object>copyOf(row)).toList();
+    }
+
+    @Override
+    public List<String> readFirstRow(String sheet) {
+        List<List<String>> rows = rowsOf(sheet);
+        return rows.isEmpty() ? List.of() : rows.get(0);
+    }
+
     @Override
     public List<String> readColumn(String sheet, int column) {
         return rowsOf(sheet).stream()
