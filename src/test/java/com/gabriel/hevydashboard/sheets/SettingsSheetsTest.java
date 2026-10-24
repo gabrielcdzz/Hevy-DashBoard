@@ -30,6 +30,32 @@ class SettingsSheetsTest {
     }
 
     @Test
+    void acrescentaParametroNovoNaConfigQueOUsuarioJaTinhaSemSobrescrever() {
+        planilha.ensureSheets(List.of("config"));
+        planilha.replaceRows("config", List.of(
+                List.of("chave", "valor"),
+                List.of("semanas_estagnacao", 4)), SheetsGateway.InputMode.TYPED);
+
+        Settings settings = configuracao.load();
+
+        assertEquals(4, settings.stagnationWeeks());     // o valor do usuário foi mantido
+        assertEquals(5, settings.workoutsPerWeek());     // o parâmetro novo entrou com o padrão
+        assertEquals(List.of("treinos_por_semana", "5"), planilha.sheets.get("config").get(2));
+    }
+
+    @Test
+    void metaDeTreinosPorSemanaEditadaPeloUsuarioEMantida() {
+        planilha.ensureSheets(List.of("config"));
+        planilha.replaceRows("config", List.of(
+                List.of("chave", "valor"),
+                List.of("semanas_estagnacao", 3),
+                List.of("treinos_por_semana", 4)), SheetsGateway.InputMode.TYPED);
+
+        assertEquals(4, configuracao.load().workoutsPerWeek());
+        assertEquals(3, planilha.sheets.get("config").size()); // nada foi acrescentado
+    }
+
+    @Test
     void niveisIniciaisSaoBaixoModeradoEAlto() {
         Settings settings = configuracao.load();
 

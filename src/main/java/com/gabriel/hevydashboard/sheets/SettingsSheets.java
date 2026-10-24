@@ -35,6 +35,8 @@ public class SettingsSheets {
     private static final String GROUPING = "agrupamento";
     private static final String STAGNATION_KEY = "semanas_estagnacao";
     private static final int DEFAULT_STAGNATION_WEEKS = 3;
+    private static final String WORKOUTS_KEY = "treinos_por_semana";
+    private static final int DEFAULT_WORKOUTS_PER_WEEK = 5;
 
     private final SheetsGateway gateway;
 
@@ -50,12 +52,14 @@ public class SettingsSheets {
         seedIfEmpty(LEVELS, levelsSeed());
         seedIfEmpty(PHASES, phasesSeed());
         seedIfEmpty(CONFIG, configSeed());
+        appendMissingConfigKeys();
 
         return new Settings(
                 readRules(),
                 readTargets(),
                 readLevels(),
-                readStagnationWeeks());
+                readConfigNumber(STAGNATION_KEY, DEFAULT_STAGNATION_WEEKS),
+                readConfigNumber(WORKOUTS_KEY, DEFAULT_WORKOUTS_PER_WEEK));
     }
 
     // ------------------------------------------------------------------
@@ -103,7 +107,30 @@ public class SettingsSheets {
     private static List<List<Object>> configSeed() {
         return List.of(
                 List.of("chave", "valor"),
-                List.of(STAGNATION_KEY, DEFAULT_STAGNATION_WEEKS));
+                List.of(STAGNATION_KEY, DEFAULT_STAGNATION_WEEKS),
+                List.of(WORKOUTS_KEY, DEFAULT_WORKOUTS_PER_WEEK));
+    }
+
+    /**
+     * Quando uma versão nova do programa passa a precisar de um parâmetro, a aba config que o usuário já
+     * tem não o possui. Em vez de sobrescrever a aba, a linha que falta é acrescentada no fim.
+     */
+    private void appendMissingConfigKeys() {
+        Set<String> present = new HashSet<>();
+        List<List<String>> rows = gateway.readRows(CONFIG);
+        for (int i = 1; i < rows.size(); i++) {
+            present.add(cell(rows.get(i), 0));
+        }
+        List<List<Object>> missing = new ArrayList<>();
+        if (!present.contains(STAGNATION_KEY)) {
+            missing.add(List.of(STAGNATION_KEY, DEFAULT_STAGNATION_WEEKS));
+        }
+        if (!present.contains(WORKOUTS_KEY)) {
+            missing.add(List.of(WORKOUTS_KEY, DEFAULT_WORKOUTS_PER_WEEK));
+        }
+        if (!missing.isEmpty()) {
+            gateway.appendRows(CONFIG, missing, SheetsGateway.InputMode.TYPED);
+        }
     }
 
     private void seedIfEmpty(String sheet, List<List<Object>> rows) {
@@ -165,14 +192,14 @@ public class SettingsSheets {
         return new VolumeLevels(levels);
     }
 
-    private int readStagnationWeeks() {
+    private int readConfigNumber(String key, int defaultValue) {
         List<List<String>> rows = gateway.readRows(CONFIG);
         for (int i = 1; i < rows.size(); i++) {
-            if (STAGNATION_KEY.equals(cell(rows.get(i), 0))) {
+            if (key.equals(cell(rows.get(i), 0))) {
                 return parseNumber(CONFIG, i, "valor", cell(rows.get(i), 1));
             }
         }
-        return DEFAULT_STAGNATION_WEEKS;
+        return defaultValue;
     }
 
     /** Lê as colunas min e max (B e C). Max vazio significa "sem teto". */

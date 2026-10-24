@@ -24,7 +24,8 @@ class VolumeReportTest {
                     new VolumeLevel("baixo", new TargetRange(1, 9)),
                     new VolumeLevel("moderado", new TargetRange(10, 20)),
                     new VolumeLevel("alto", new TargetRange(21, TargetRange.NO_LIMIT)))),
-            3);
+            3,
+            5);
 
     @Test
     void contaDiretasEIndiretasDeSeriesDeTrabalhoPorMusculoESemana() {
@@ -75,9 +76,26 @@ class VolumeReportTest {
 
     @Test
     void textoNoFormatoDeExibicao() {
-        VolumeReport.MuscleWeek semana = new VolumeReport.MuscleWeek(SEMANA_1, "biceps", 11, 10, "moderado", null);
+        VolumeReport.MuscleWeek semana = new VolumeReport.MuscleWeek(SEMANA_1, "biceps", 11, 10, 3, "moderado", null);
 
         assertEquals("Bíceps: 11 diretas (indiretas 10)", semana.text());
+    }
+
+    @Test
+    void frequenciaContaOsDiasDistintosComSerieDireta() {
+        List<SetRecord> series = new ArrayList<>();
+        series.addAll(supino(SEMANA_1, "normal", "normal", "normal"));           // 1 dia, 3 séries
+        series.add(new SetRecord("w-2", SEMANA_1.plusDays(2), SEMANA_1, "PUSH", 60, "Supino", "supino", "chest",
+                List.of("triceps", "shoulders"), "normal", true, 60.0, 8, null));  // 2º dia
+        series.add(new SetRecord("w-3", SEMANA_1.plusDays(4), SEMANA_1, "PULL", 60, "Rosca", "rosca", "biceps",
+                List.of(), "normal", true, 20.0, 10, null));                       // bíceps direto
+
+        List<VolumeReport.MuscleWeek> relatorio = VolumeReport.weekly(series, SETTINGS);
+
+        assertEquals(2, resultado(relatorio, SEMANA_1, "chest").sessions());
+        assertEquals(1, resultado(relatorio, SEMANA_1, "biceps").sessions());
+        // O tríceps só recebeu indireta (supino), e indireta não conta como dia de treino do músculo.
+        assertEquals(0, resultado(relatorio, SEMANA_1, "triceps").sessions());
     }
 
     @Test

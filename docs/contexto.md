@@ -111,7 +111,7 @@ A soma das diretas (76) é igual ao total de séries de trabalho, e isso deve va
 | `faixa_alvo` | Faixa-alvo de séries diretas por semana, por músculo | Usuário (o script cria com valores iniciais) |
 | `niveis_volume` | Níveis baixo (1–9), moderado (10–20) e alto (21+) | Usuário (o script cria com valores iniciais) |
 | `fases` | Tabela de fases (cutting, bulking) para o marcador nos gráficos | Usuário (o script cria com a fase atual) |
-| `config` | Parâmetros simples (`semanas_estagnacao`) | Usuário (o script cria com valores iniciais) |
+| `config` | Parâmetros simples (`semanas_estagnacao`, `treinos_por_semana`) | Usuário (o script cria com valores iniciais e acrescenta chaves novas que faltarem) |
 | `volume_semanal` | Diretas e indiretas por músculo e por semana (executado) | Script (sempre reescrita) |
 | `volume_rotinas` | Diretas e indiretas por músculo, por rotina e total (planejado) | Script (sempre reescrita) |
 
@@ -123,7 +123,7 @@ Colunas:
 - **`faixa_alvo`:** `musculo`, `min`, `max` (séries diretas por semana). Valores iniciais: 10–20 para tudo, exceto peito em 1–9 (baixo volume proposital). Aviso: glúteo e lombar não têm exercício direto nas rotinas atuais; o glúteo foi incluído com 10–20 e aparecerá "abaixo" até o usuário decidir remover a linha.
 - **`niveis_volume`:** `nivel`, `min`, `max` (max vazio = sem teto). Baixo 1–9, moderado 10–20, alto 21+ (definido pelo usuário em 24/10/2026). A classificação usa as séries **diretas**.
 - **`fases`:** `fase`, `inicio`, `fim`, com a primeira linha `cutting | 2026-09-14 | (vazio)`. Só o dashboard lê.
-- **`config`:** `chave`, `valor`. Por enquanto só `semanas_estagnacao = 3` (o plano diz 3 ou 4).
+- **`config`:** `chave`, `valor`. `semanas_estagnacao = 3` (o plano diz 3 ou 4) e `treinos_por_semana = 5` (a meta que define uma semana "completa"; 5 porque há 5 rotinas).
 - As faixas ficaram em abas separadas (e não numa só `config`) para cada uma ser uma tabela limpa para o Looker Studio.
 
 As abas `volume_*` nunca devem ser editadas à mão, porque o script as sobrescreve.
@@ -185,5 +185,15 @@ Arquitetura nova: Hevy API → Java (sincronização e cálculo) → Google Shee
 **Dados reais (24/10/2026):** histórico de 27/02/2023 a 24/10/2026, 800 treinos, duração média de 91 minutos. Na semana de 12/10: bíceps 12 diretas (11 indiretas), ombros 12, costas 11, tríceps 8 (5), peito 7. Dos 21 exercícios das rotinas atuais, 6 estão progredindo, 11 estagnados, 1 inativo e 3 sem base de comparação (janelas de 3 semanas). Há 56 exercícios com carga no histórico e 603 recordes batidos, 27 deles em outubro/2026. Três séries parecem erro de digitação no Hevy (elevação lateral halter 10 kg x 101 em 19/06/2023, remada iso-lateral 43 kg x 101 em 30/08/2023 e rosca Scott 55 kg x 79 em 04/09/2023) e o usuário pode corrigi-las no app.
 
 **Próxima versão (fora do escopo atual):** sistema com contas e login para outras pessoas conectarem o próprio Hevy. A API do Hevy não tem OAuth, só chave pessoal (exige Hevy Pro), então isso pede backend, banco de dados e guarda criptografada das chaves. O `HevyClient` e as métricas já não dependem de uma chave fixa nem da planilha, para facilitar essa fase.
+
+**Definições das métricas (24/10/2026):**
+
+- Semana completa: pelo menos `treinos_por_semana` treinos. A sequência atual não é quebrada pela semana em andamento ainda incompleta; se ela já chegou na meta, entra na conta.
+- Push = peito, ombros e tríceps. Pull = costas, bíceps, antebraço e trapézio. Pernas = quadríceps, posterior, glúteos e panturrilha. Core = abdômen. Superior = push + pull; inferior = pernas. É uma aproximação pelo músculo primário (o ombro conta como push mesmo em elevação lateral e crucifixo invertido).
+- Faixas de repetição: 1–5, 6–12 e 13 ou mais, só séries de trabalho.
+- Frequência de um músculo: dias distintos da semana com pelo menos uma série direta (indireta não conta).
+- Exercícios com o mesmo template ou o mesmo nome são um exercício só (o usuário tem duas versões de "Remada Iso-Lateral (Máquina)"). "Elevação Lateral (Halter)" e "Elevação Lateral (Halter) 1" têm nomes diferentes e continuam separados.
+
+**Dados reais após as correções do usuário (24/10/2026):** 191 semanas de histórico, 91 delas completas (5 ou mais treinos), melhor sequência de 13 semanas, sequência atual de 1, 799 dias treinados, duração média de 91 minutos (nas últimas semanas fica perto de 60). 54 exercícios com carga e 635 recordes batidos. Semana de 19/10: 5 treinos, 66 séries, 31 toneladas.
 
 **Decisão técnica ainda aberta:** qual biblioteca de gráficos usar no front.

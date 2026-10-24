@@ -88,6 +88,32 @@ class ExerciseReportTest {
         assertEquals(2, exercicios.get(0).sessions().size());
     }
 
+    @Test
+    void templatesDiferentesComOMesmoNomeSaoUmExercicioSo() {
+        List<SetRecord> series = List.of(
+                serie("remada-antiga", "Remada Iso-Lateral (Máquina)", "2026-08-01", 50, 10, true),
+                serie("remada-nova", "  remada iso-lateral (máquina) ", "2026-10-10", 55, 10, true),
+                serie("supino", "Supino", "2026-10-10", 60, 8, true));
+
+        List<ExerciseReport.ExerciseSummary> exercicios = ExerciseReport.build(series, HOJE, 3).exercises();
+
+        assertEquals(2, exercicios.size());
+        ExerciseReport.ExerciseSummary remada = exercicios.stream()
+                .filter(e -> e.name().toLowerCase().contains("remada")).findFirst().orElseThrow();
+        assertEquals(2, remada.sessions().size());
+        assertEquals("remada-nova", remada.templateId()); // o da sessão mais recente
+        assertEquals(55.0, remada.records().maxWeightKg().value());
+    }
+
+    @Test
+    void nomesDiferentesComTemplatesDiferentesContinuamSeparados() {
+        List<SetRecord> series = List.of(
+                serie("a", "Elevação Lateral (Halter)", "2026-08-01", 10, 12, true),
+                serie("b", "Elevação Lateral (Halter) 1", "2026-10-01", 12, 12, true));
+
+        assertEquals(2, ExerciseReport.build(series, HOJE, 3).exercises().size());
+    }
+
     // ------------------------------------------------------------------
     // Recordes
     // ------------------------------------------------------------------

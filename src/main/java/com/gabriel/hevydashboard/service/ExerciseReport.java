@@ -4,14 +4,16 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
  * Métricas por exercício: evolução de carga, 1RM estimado, recordes pessoais e alerta de estagnação.
- * Os exercícios são identificados pelo template do Hevy, não pelo nome.
+ * Um exercício é identificado pelo template do Hevy ou pelo nome (ver {@code groupByExercise}).
  * Só entram séries de trabalho com carga e repetições ({@link SetRecord#countsForStrength()}).
  */
 public final class ExerciseReport {
@@ -74,26 +76,61 @@ public final class ExerciseReport {
      * @param stagnationWeeks  N, o tamanho de cada uma das duas janelas comparadas
      */
     public static Result build(Collection<SetRecord> sets, LocalDate today, int stagnationWeeks) {
-        Map<String, List<SetRecord>> byExercise = new TreeMap<>();
-        for (SetRecord set : sets) {
-            if (set.countsForStrength()) {
-                byExercise.computeIfAbsent(set.templateId(), id -> new ArrayList<>()).add(set);
-            }
-        }
+        List<SetRecord> strengthSets = sets.stream().filter(SetRecord::countsForStrength).toList();
 
         List<ExerciseSummary> summaries = new ArrayList<>();
         List<PrEvent> events = new ArrayList<>();
-        byExercise.forEach((templateId, list) -> summaries.add(summarize(templateId, list, today, stagnationWeeks, events)));
+        groupByExercise(strengthSets).forEach(list -> summaries.add(summarize(list, today, stagnationWeeks, events)));
 
-        summaries.sort(Comparator.comparing(ExerciseSummary::name));
+        summaries.sort(Comparator.comparing(ExerciseSummary::name).thenComparing(ExerciseSummary::templateId));
         events.sort(Comparator.comparing(PrEvent::date).thenComparing(PrEvent::exercise).thenComparing(PrEvent::type));
         return new Result(summaries, events);
     }
 
-    private static ExerciseSummary summarize(String templateId, List<SetRecord> sets, LocalDate today,
+    /**
+     * Agrupa as séries por exercício. Duas séries são do mesmo exercício se têm o mesmo template
+     * (mesmo que o exercício tenha sido renomeado) ou o mesmo nome (mesmo que o usuário tenha criado um
+     * template novo para ele). Sem isso o histórico de um exercício ficaria cortado em dois.
+     */
+    private static Collection<List<SetRecord>> groupByExercise(List<SetRecord> sets) {
+        Map<String, String> parent = new HashMap<>();
+        for (SetRecord set : sets) {
+            union(parent, "template:" + set.templateId(), "nome:" + normalized(set.exercise()));
+        }
+        Map<String, List<SetRecord>> groups = new TreeMap<>();
+        for (SetRecord set : sets) {
+            groups.computeIfAbsent(find(parent, "template:" + set.templateId()), root -> new ArrayList<>()).add(set);
+        }
+        return groups.values();
+    }
+
+    private static String normalized(String name) {
+        return name.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static String find(Map<String, String> parent, String key) {
+        parent.putIfAbsent(key, key);
+        String root = key;
+        while (!parent.get(root).equals(root)) {
+            root = parent.get(root);
+        }
+        parent.put(key, root); // atalho para as próximas buscas
+        return root;
+    }
+
+    private static void union(Map<String, String> parent, String a, String b) {
+        String rootA = find(parent, a);
+        String rootB = find(parent, b);
+        if (!rootA.equals(rootB)) {
+            parent.put(rootB, rootA);
+        }
+    }
+
+    private static ExerciseSummary summarize(List<SetRecord> sets, LocalDate today,
                                              int stagnationWeeks, List<PrEvent> events) {
-        // O nome e o músculo vêm da série mais recente, caso o exercício tenha sido renomeado.
+        // O nome, o template e o músculo vêm da série mais recente, caso o exercício tenha sido renomeado.
         SetRecord latest = sets.stream().max(Comparator.comparing(SetRecord::date)).orElseThrow();
+        String templateId = latest.templateId();
 
         TreeMap<LocalDate, List<SetRecord>> byDate = sets.stream()
                 .collect(Collectors.groupingBy(SetRecord::date, TreeMap::new, Collectors.toList()));

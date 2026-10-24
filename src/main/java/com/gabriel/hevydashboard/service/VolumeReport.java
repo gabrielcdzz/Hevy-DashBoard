@@ -3,8 +3,11 @@ package com.gabriel.hevydashboard.service;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -15,14 +18,16 @@ public final class VolumeReport {
     }
 
     /**
-     * @param level  "baixo", "moderado", "alto" ou "nenhum", pelas séries diretas
-     * @param status posição das séries diretas na faixa-alvo do músculo; null se o músculo não tem faixa-alvo
+     * @param sessions quantos dias da semana o músculo recebeu pelo menos uma série direta (a frequência)
+     * @param level    "baixo", "moderado", "alto" ou "nenhum", pelas séries diretas
+     * @param status   posição das séries diretas na faixa-alvo do músculo; null se o músculo não tem faixa-alvo
      */
     public record MuscleWeek(
             LocalDate week,
             String muscle,
             int direct,
             int indirect,
+            int sessions,
             String level,
             TargetRange.Status status) {
 
@@ -39,6 +44,7 @@ public final class VolumeReport {
      */
     public static List<MuscleWeek> weekly(Collection<SetRecord> sets, Settings settings) {
         TreeMap<LocalDate, Map<String, MuscleVolume>> byWeek = new TreeMap<>();
+        Map<LocalDate, Map<String, Set<LocalDate>>> daysByWeek = new HashMap<>();
         TreeSet<String> muscles = new TreeSet<>(settings.targets().keySet());
 
         for (SetRecord set : sets) {
@@ -46,9 +52,13 @@ public final class VolumeReport {
                 continue;
             }
             Map<String, MuscleVolume> week = byWeek.computeIfAbsent(set.week(), w -> new TreeMap<>());
+            Map<String, Set<LocalDate>> weekDays = daysByWeek.computeIfAbsent(set.week(), w -> new HashMap<>());
             settings.rules().contribution(set.primaryMuscle(), set.secondaryMuscles(), 1).forEach((muscle, volume) -> {
                 week.merge(muscle, volume, MuscleVolume::plus);
                 muscles.add(muscle);
+                if (volume.direct() > 0) {
+                    weekDays.computeIfAbsent(muscle, m -> new HashSet<>()).add(set.date());
+                }
             });
         }
         if (byWeek.isEmpty()) {
@@ -68,6 +78,7 @@ public final class VolumeReport {
                         muscle,
                         volume.direct(),
                         volume.indirect(),
+                        daysByWeek.getOrDefault(week, Map.of()).getOrDefault(muscle, Set.of()).size(),
                         settings.levels().classify(volume.direct()),
                         target == null ? null : target.statusOf(volume.direct())));
             }
