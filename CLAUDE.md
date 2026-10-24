@@ -41,7 +41,10 @@ java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar     # precisa de HEVY_API_KEY
 
 ## Arquitetura
 
-Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I/O**, para ser testável isoladamente) e `sheets` (Google Sheets, via conta de serviço). Em `sheets`, já existem a conexão, a leitura/escrita de abas, o `SyncState` e a aba `series_treinos` (`WorkoutSetsTable`). Faltam `series_rotinas`, `ajustes_manuais`, `config` e as abas de volume.
+Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I/O**, para ser testável isoladamente) e `sheets` (Google Sheets, via conta de serviço). Em `sheets`, já existem a conexão, a leitura/escrita de abas, o `SyncState` e a aba `series_treinos` (`WorkoutSetsTable`). Faltam `series_rotinas` e as abas de volume.
+
+- `sheets/SettingsSheets.load()`: cria e lê as abas que o usuário edita (`ajustes_manuais`, `faixa_alvo`, `niveis_volume`, `fases`, `config`) e devolve um `service.Settings`. **Só preenche uma aba com os valores iniciais se ela estiver totalmente vazia**; depois o conteúdo é do usuário e nunca é sobrescrito (cabeçalho sozinho conta como escolha do usuário). Erros de preenchimento dizem a aba e a linha. A aba `fases` só é lida pelo dashboard.
+- Níveis de volume semanal (séries diretas): baixo 1–9, moderado 10–20, alto 21+, e "nenhum" para 0 (`VolumeLevels.classify`). `TargetRange.statusOf` diz se um valor está abaixo, dentro ou acima da faixa-alvo.
 
 - `sheets/SheetsGateway`: a interface do que o código precisa da planilha (`ensureSheets`, `readRows`, `readColumn`, `replaceRows`, `appendRows`, `deleteRows`). O resto do código depende dela, nunca do `SheetsClient`, para os testes usarem `InMemorySheets` (em `src/test`) e não chamarem o Google. A escrita tem dois modos: `RAW` (texto exato, para dados de controle) e `TYPED` (o Sheets interpreta datas e números, para as abas que o Looker Studio vai ler).
 - **Nunca ler de volta e regravar uma aba `TYPED`.** O Sheets devolve datas formatadas conforme o idioma da planilha ("24/10/2026"), e regravar isso pode trocar dia e mês. Por isso as atualizações são incrementais: `readColumn` só do `workout_id`, `deleteRows` nas linhas afetadas e `appendRows` com as novas. As datas ficam como datas de verdade (confirmado: o Sheets guarda o número de série).

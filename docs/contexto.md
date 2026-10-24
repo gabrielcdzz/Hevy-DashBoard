@@ -108,7 +108,10 @@ A soma das diretas (76) é igual ao total de séries de trabalho, e isso deve va
 | `series_treinos` | Uma linha por série dos treinos executados | Script |
 | `series_rotinas` | Uma linha por série das 5 rotinas (planejado) | Script |
 | `ajustes_manuais` | Músculos que recebem indireta e agrupamento de músculos | Usuário (o script cria com os valores iniciais) |
-| `config` | Faixa-alvo por músculo, tabela de fases, parâmetros | Usuário (o script cria com valores iniciais) |
+| `faixa_alvo` | Faixa-alvo de séries diretas por semana, por músculo | Usuário (o script cria com valores iniciais) |
+| `niveis_volume` | Níveis baixo (1–9), moderado (10–20) e alto (21+) | Usuário (o script cria com valores iniciais) |
+| `fases` | Tabela de fases (cutting, bulking) para o marcador nos gráficos | Usuário (o script cria com a fase atual) |
+| `config` | Parâmetros simples (`semanas_estagnacao`) | Usuário (o script cria com valores iniciais) |
 | `volume_semanal` | Diretas e indiretas por músculo e por semana (executado) | Script (sempre reescrita) |
 | `volume_rotinas` | Diretas e indiretas por músculo, por rotina e total (planejado) | Script (sempre reescrita) |
 
@@ -116,8 +119,12 @@ Colunas:
 
 - **`series_treinos`:** `workout_id`, `data`, `semana_inicio` (a segunda-feira), `rotina`, `exercicio`, `template_id`, `musculo_primario`, `musculos_secundarios`, `tipo_serie`, `valida`, `carga_kg`, `reps`, `rpe`
 - **`series_rotinas`:** `routine_id`, `rotina`, `exercicio`, `template_id`, `indice_serie`, `tipo_serie`, `valida`, `carga_kg`, `reps`, `musculo_primario`, `musculos_secundarios`
-- **`ajustes_manuais`:** duas tabelas que viram `VolumeRules` no código. A primeira, `musculos_com_indireta`, começa com `biceps` e `triceps`. A segunda, `agrupamento` (`musculo_hevy`, `grupo`), começa com `lats → back` e `upper_back → back`.
-- **`config`:** faixa-alvo (`musculo`, `min`, `max`, com valores provisórios), fases (`fase`, `inicio`, `fim`, com a primeira linha `cutting | 2026-09-14 | (vazio)`) e semanas sem progressão para o alerta de estagnação (3 ou 4).
+- **`ajustes_manuais`:** `tipo`, `musculo`, `grupo`. Vira `VolumeRules` no código. Linhas `indireta | biceps` e `indireta | triceps` dizem quais músculos recebem indireta; linhas `agrupamento | lats | back` e `agrupamento | upper_back | back` juntam músculos.
+- **`faixa_alvo`:** `musculo`, `min`, `max` (séries diretas por semana). Valores iniciais: 10–20 para tudo, exceto peito em 1–9 (baixo volume proposital). Aviso: glúteo e lombar não têm exercício direto nas rotinas atuais; o glúteo foi incluído com 10–20 e aparecerá "abaixo" até o usuário decidir remover a linha.
+- **`niveis_volume`:** `nivel`, `min`, `max` (max vazio = sem teto). Baixo 1–9, moderado 10–20, alto 21+ (definido pelo usuário em 24/10/2026). A classificação usa as séries **diretas**.
+- **`fases`:** `fase`, `inicio`, `fim`, com a primeira linha `cutting | 2026-09-14 | (vazio)`. Só o dashboard lê.
+- **`config`:** `chave`, `valor`. Por enquanto só `semanas_estagnacao = 3` (o plano diz 3 ou 4).
+- As faixas ficaram em abas separadas (e não numa só `config`) para cada uma ser uma tabela limpa para o Looker Studio.
 
 As abas `volume_*` nunca devem ser editadas à mão, porque o script as sobrescreve.
 
