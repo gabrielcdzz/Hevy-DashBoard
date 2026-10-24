@@ -165,4 +165,19 @@ As abas `volume_*` nunca devem ser editadas à mão, porque o script as sobrescr
 
 **Segunda fase:** força relativa (1RM ÷ peso corporal), próximo PR, RPE médio, notas de treino cruzadas com quedas de desempenho, volume por rotina. Antes, verificar se o peso corporal e o RPE estão preenchidos no Hevy.
 
-**Em aberto:** valores iniciais da faixa-alvo, 3 ou 4 semanas para o alerta de estagnação, repositório público ou privado, migração futura para banco de dados e dashboard web próprio.
+**Em aberto:** 3 ou 4 semanas para o alerta de estagnação e migração futura para banco de dados.
+
+## 7. Mudança de rumo (24/10/2026): dashboard web próprio
+
+O usuário liberou o projeto inteiro (inclusive commits e front end) e decidiu:
+
+- **Dashboard web próprio, em vez de Looker Studio.** As abas Visão geral, Exercícios e Análise da seção 5 do `plano.md` viram páginas/seções do site. As etapas 7 a 9 da seção 6 (Looker Studio) ficam substituídas por isso.
+- **Repositório público** (`github.com/gabrielcdzz/Hevy-DashBoard`). Actions e GitHub Pages gratuitos, então a sincronização pode rodar a cada 30 minutos.
+- **Autonomia:** o Claude decide e avisa, com commits em etapas pequenas. Pergunta antes de `git push`, de apagar dados na planilha, de criar serviços externos e de publicar dados reais.
+- **`series_rotinas` descartada.** O volume planejado das rotinas é calculado direto das rotinas.
+
+Arquitetura nova: Hevy API → Java (sincronização e cálculo) → Google Sheets (séries brutas, configurações editáveis e estado) + arquivo de dados do dashboard → site estático publicado no GitHub Pages pelo GitHub Actions.
+
+**Privacidade (repositório e site públicos):** dados reais de treino nunca entram em commit. O arquivo de dados do site é gerado pelo Actions e publicado como artefato do Pages, fora do histórico do Git. Publicar os treinos reais num site público expõe datas, exercícios e cargas, então isso exige confirmação do usuário antes de ligar. O site deve funcionar também com dados de exemplo, para servir de portfólio. As fixtures de `src/test/resources/fixtures/` já mostram as rotinas atuais.
+
+**Decisões técnicas ainda abertas:** de onde o Java lê o histórico para montar os dados do site (reler a aba `series_treinos` com valores sem formatação ou rebuscar os treinos no Hevy), e qual biblioteca de gráficos usar no front.

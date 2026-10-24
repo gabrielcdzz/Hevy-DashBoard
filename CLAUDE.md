@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Visão geral
 
-Aplicação Java 21 (Maven, sem framework) que lê os treinos do Hevy, calcula as séries diretas e indiretas por grupo muscular na semana, grava tudo no Google Sheets e alimenta um dashboard no Looker Studio. Vai rodar agendada no GitHub Actions. O projeto também é portfólio do usuário, então testes, README (em português) e organização do código fazem parte do escopo.
+Aplicação Java 21 (Maven, sem framework) que lê os treinos do Hevy, calcula as séries diretas e indiretas por grupo muscular na semana, grava tudo no Google Sheets e alimenta um dashboard web próprio (decisão de 24/10/2026; o plano original usava Looker Studio). Vai rodar agendada no GitHub Actions. O projeto também é portfólio do usuário, então testes, README (em português) e organização do código fazem parte do escopo.
 
 Documentação do projeto:
 
@@ -15,7 +15,7 @@ Hoje o `Main` só faz um teste de conexão. O cálculo de volume (`service`) est
 
 ## Como trabalhar com o usuário
 
-- O Claude escreve o código e o usuário revisa, executa e commita pelo **GitHub Desktop**, para o histórico ficar no nome dele. **Não fazer commit nem push** sem pedido explícito.
+- Desde 24/10/2026 o usuário liberou o projeto inteiro, inclusive o front end e os commits. Commitar em etapas pequenas, com mensagem em português. **Perguntar antes de** `git push`, de apagar dados na planilha, de criar serviços externos e de publicar dados reais de treino (o repositório é público).
 - Explicar a lógica de cada parte de forma objetiva, passo a passo, com números e exemplos. O usuário precisa saber defender o projeto numa entrevista.
 - Trabalhar em etapas pequenas, uma camada por vez, cada uma terminando com `mvn test` passando.
 - O ambiente é Windows/PowerShell. Comandos entregues ao usuário devem funcionar no PowerShell.
