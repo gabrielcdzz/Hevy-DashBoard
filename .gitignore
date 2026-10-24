@@ -15,3 +15,13 @@ buildNumber.properties
 .project
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
+
+# Segredos
+.env
+secrets/
+service-account*.json
+credentials*.json
+
+# Editor
+.vscode/
+.idea/
