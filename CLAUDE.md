@@ -58,6 +58,7 @@ Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I
 - `service/SetRecord`: uma série já com data local, semana e músculos. É a unidade de dados das métricas, venha de `SetRecords.of(Workout, ...)` ou da planilha. As métricas novas devem receber `Collection<SetRecord>` e `Settings`, sem saber de onde vêm.
 - `service/VolumeRules.contribution`: a única implementação da regra "direta no primário, indireta só nos permitidos". Tanto `VolumeCalculator` (rotinas) quanto `VolumeReport` (semanas) a usam; não duplique a regra.
 - `service/VolumeReport.weekly`: uma linha por semana e músculo, sem buracos (semanas sem treino aparecem com zero, e músculos com faixa-alvo aparecem com zero). Traz o nível e a posição na faixa. `MuscleNames.label` traduz os nomes.
+- `service/ExerciseReport.build(séries, hoje, semanasDeEstagnação)`: por exercício (identificado pelo template, nome da série mais recente), os pontos por dia de treino (maior carga e melhor 1RM de Epley), os recordes (carga, repetições e 1RM, com a **primeira** data em que foram alcançados), a lista de recordes batidos (`PrEvent`, base para "PRs do mês"; a primeira sessão só estabelece a base) e a tendência. Tendência: melhor 1RM das últimas N semanas contra o das N anteriores, com `PROGRESSING`, `STAGNANT` (treinou e não melhorou), `INACTIVE` (não treinou, não é estagnação) e `NO_BASELINE`. A semana atual conta, mesmo incompleta. O relatório cobre todos os exercícios; filtrar pelos das rotinas é papel de quem exporta.
 - `src/test/resources/fixtures/`: as 5 rotinas reais e os 22 templates delas, salvos da API em 24/10/2026. São a base do teste que confere os números de `docs/contexto.md`. Se as rotinas mudarem no Hevy, a fixture e os números esperados mudam juntos.
 
 - `client/HevyClient`: cliente HTTP somente leitura para `https://api.hevyapp.com/v1`.
@@ -74,7 +75,7 @@ Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I
 - Série direta conta para o `primaryMuscleGroup` do template. Série indireta conta, em campo separado, **só para bíceps e tríceps**. Os outros secundários do Hevy são ignorados.
 - `lats` e `upper_back` são contados juntos como `back`. Essas regras ficam em `VolumeRules.DEFAULT` e depois vão ser lidas da aba `ajustes_manuais`.
 - A semana vai de segunda a domingo, no fuso **America/Sao_Paulo**. O Hevy grava em UTC, e um treino às 22h de domingo não pode cair na semana seguinte.
-- Séries com carga 0 ou sem repetições contam no volume, mas são ignoradas na tonelagem, no 1RM e nos PRs.
+- Séries com carga 0, sem carga, sem repetições ou com mais de 50 repetições (`SetRecord.MAX_PLAUSIBLE_REPS`, erro de digitação) contam no volume, mas são ignoradas na tonelagem, no 1RM e nos PRs. Use sempre `SetRecord.countsForStrength()`.
 - 1RM estimado pela fórmula de Epley: `carga × (1 + reps / 30)`.
 - A soma das diretas é sempre igual ao total de séries válidas. Os valores esperados das 5 rotinas estão em `docs/contexto.md` e devem virar teste.
 - O volume baixo de peito é proposital. Não tratar como alerta nem sugerir mudança.

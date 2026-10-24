@@ -20,7 +20,11 @@ public final class Weeks {
      * o horário é convertido para o fuso local antes de olhar o dia da semana.
      */
     public static LocalDate startOf(OffsetDateTime time, ZoneId zone) {
-        LocalDate localDate = time.atZoneSameInstant(zone).toLocalDate();
-        return localDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        return startOf(time.atZoneSameInstant(zone).toLocalDate());
+    }
+
+    /** A segunda-feira da semana de uma data local. */
+    public static LocalDate startOf(LocalDate date) {
+        return date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
     }
 }

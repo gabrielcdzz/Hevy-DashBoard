@@ -31,4 +31,20 @@ public record SetRecord(
     public SetRecord {
         secondaryMuscles = List.copyOf(secondaryMuscles);
     }
+
+    /**
+     * Acima disto, a série é tratada como erro de digitação (ex.: 101 repetições em vez de 10).
+     * No histórico real há séries de até 34 repetições e depois dessas só três erros, de 79 a 101.
+     */
+    public static final int MAX_PLAUSIBLE_REPS = 50;
+
+    /**
+     * Série de trabalho com carga e repetições. É a única que entra em 1RM, recordes e tonelagem:
+     * aquecimento não conta, e séries de exercícios ainda não feitos (carga 0), de peso corporal
+     * (sem carga) ou com repetições absurdas distorceriam os números. O volume, ao contrário,
+     * conta todas as séries de trabalho.
+     */
+    public boolean countsForStrength() {
+        return valid && weightKg != null && weightKg > 0 && reps != null && reps > 0 && reps <= MAX_PLAUSIBLE_REPS;
+    }
 }

@@ -36,7 +36,7 @@ Fluxo: **Hevy API → Java → Google Sheets → Looker Studio**, rodando no **G
 5. **Formato de exibição:** `Bíceps: 11 diretas (indiretas 10)`.
 6. **Janela:** semana completa, de segunda a domingo, no fuso de Brasília.
 7. **Volume planejado × executado:** o planejado vem das 5 rotinas salvas (aba `volume_rotinas`) e o executado vem dos treinos feitos (aba `volume_semanal`). A regra de contagem é a mesma nos dois.
-8. **Séries com carga 0 ou sem repetições** (Shoulder Press, Chest Fly, Rear Delt Reverse Fly e Seated Incline Curl, nas rotinas) são de exercícios que o usuário ainda não fez, mas vai fazer. Elas contam como séries no volume. Na tonelagem, no 1RM e nos PRs, devem ser ignoradas para não distorcer os números.
+8. **Séries com carga 0 ou sem repetições** (Shoulder Press, Chest Fly, Rear Delt Reverse Fly e Seated Incline Curl, nas rotinas) são de exercícios que o usuário ainda não fez, mas vai fazer. Elas contam como séries no volume. Na tonelagem, no 1RM e nos PRs, devem ser ignoradas para não distorcer os números. O mesmo vale para séries sem carga (peso corporal) e para séries com mais de 50 repetições, tratadas como erro de digitação (decidido em 24/10/2026, depois de achar 3 séries de 79 e 101 repetições no histórico).
 
 ### Valores esperados (usar como teste)
 
@@ -182,7 +182,7 @@ Arquitetura nova: Hevy API → Java (sincronização e cálculo) → Google Shee
 
 **Decidido: a planilha é o armazenamento.** A sincronização incremental só traz o que mudou, então o histórico completo vem de reler a aba `series_treinos` com valores sem formatação (datas como número de série). As métricas recebem `SetRecord`s e não sabem de onde eles vêm. Para a duração média dos treinos, a aba ganhou a coluna `duracao_min`.
 
-**Dados reais (24/10/2026):** histórico de 27/02/2023 a 24/10/2026, 800 treinos, duração média de 91 minutos. Na semana de 12/10: bíceps 12 diretas (11 indiretas), ombros 12, costas 11, tríceps 8 (5), peito 7.
+**Dados reais (24/10/2026):** histórico de 27/02/2023 a 24/10/2026, 800 treinos, duração média de 91 minutos. Na semana de 12/10: bíceps 12 diretas (11 indiretas), ombros 12, costas 11, tríceps 8 (5), peito 7. Dos 21 exercícios das rotinas atuais, 6 estão progredindo, 11 estagnados, 1 inativo e 3 sem base de comparação (janelas de 3 semanas). Há 56 exercícios com carga no histórico e 603 recordes batidos, 27 deles em outubro/2026. Três séries parecem erro de digitação no Hevy (elevação lateral halter 10 kg x 101 em 19/06/2023, remada iso-lateral 43 kg x 101 em 30/08/2023 e rosca Scott 55 kg x 79 em 04/09/2023) e o usuário pode corrigi-las no app.
 
 **Próxima versão (fora do escopo atual):** sistema com contas e login para outras pessoas conectarem o próprio Hevy. A API do Hevy não tem OAuth, só chave pessoal (exige Hevy Pro), então isso pede backend, banco de dados e guarda criptografada das chaves. O `HevyClient` e as métricas já não dependem de uma chave fixa nem da planilha, para facilitar essa fase.
 
