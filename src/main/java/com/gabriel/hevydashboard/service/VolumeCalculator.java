@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,29 +23,30 @@ import java.util.stream.Collectors;
  * Regras:
  * <ol>
  *   <li>Só contam séries de trabalho: tudo que não é aquecimento ("warmup").</li>
- *   <li>Cada série de trabalho vale 1 direta para o músculo primário do exercício.</li>
- *   <li>Cada série de trabalho vale 1 indireta para cada músculo secundário.</li>
- *   <li>As {@link IgnoreRule regras de ajuste} retiram contagens específicas.</li>
+ *   <li>Os músculos do Hevy passam pelo agrupamento de {@link VolumeRules} (ex.: "lats" → "back").</li>
+ *   <li>Cada série de trabalho vale 1 direta para o grupo do músculo primário.</li>
+ *   <li>Cada série de trabalho vale 1 indireta para cada grupo secundário que está na lista de
+ *       indiretas, uma vez só por grupo e nunca para o próprio grupo primário.</li>
  * </ol>
  * Exemplo: supino (peito; secundários tríceps e ombro) com 2 séries de trabalho
- * = 2 diretas de peito, 2 indiretas de tríceps e 2 indiretas de ombro.
+ * = 2 diretas de peito e 2 indiretas de tríceps. O ombro fica de fora da lista de indiretas.
  */
 public class VolumeCalculator {
 
     private final Map<String, ExerciseTemplate> templatesById;
-    private final Set<IgnoreRule> ignoreRules;
+    private final VolumeRules rules;
 
-    public VolumeCalculator(Collection<ExerciseTemplate> templates, Collection<IgnoreRule> ignoreRules) {
+    public VolumeCalculator(Collection<ExerciseTemplate> templates, VolumeRules rules) {
         this.templatesById = templates.stream()
                 .collect(Collectors.toMap(ExerciseTemplate::id, Function.identity(), (a, b) -> a));
-        this.ignoreRules = Set.copyOf(ignoreRules);
+        this.rules = rules;
     }
 
     public static boolean isWorkingSet(SetEntry set) {
         return !"warmup".equals(set.type());
     }
 
-    /** Volume por músculo de uma lista de exercícios (de um treino, de uma rotina ou de vários). */
+    /** Volume por grupo muscular de uma lista de exercícios (de um treino, de uma rotina ou de vários). */
     public Map<String, MuscleVolume> volumeOf(Collection<Exercise> exercises) {
         Map<String, MuscleVolume> volume = new TreeMap<>();
         for (Exercise exercise : exercises) {
@@ -54,12 +56,15 @@ public class VolumeCalculator {
             }
             ExerciseTemplate template = templateOf(exercise);
 
-            String primary = template.primaryMuscleGroup();
-            if (!isIgnored(primary, CountType.DIRECT)) {
-                volume.merge(primary, new MuscleVolume(workingSets, 0), MuscleVolume::plus);
-            }
-            for (String secondary : template.secondaryMuscleGroups()) {
-                if (!isIgnored(secondary, CountType.INDIRECT)) {
+            String primary = rules.groupOf(template.primaryMuscleGroup());
+            volume.merge(primary, new MuscleVolume(workingSets, 0), MuscleVolume::plus);
+
+            // Set: "lats" e "upper_back" no mesmo exercício viram "back" uma vez só.
+            Set<String> secondaries = new LinkedHashSet<>();
+            template.secondaryMuscleGroups().forEach(m -> secondaries.add(rules.groupOf(m)));
+            secondaries.remove(primary);
+            for (String secondary : secondaries) {
+                if (rules.countsIndirect(secondary)) {
                     volume.merge(secondary, new MuscleVolume(0, workingSets), MuscleVolume::plus);
                 }
             }
@@ -90,9 +95,5 @@ public class VolumeCalculator {
                     + exercise.exerciseTemplateId() + ", que não está na lista de templates.");
         }
         return template;
-    }
-
-    private boolean isIgnored(String muscle, CountType type) {
-        return ignoreRules.contains(new IgnoreRule(muscle, type));
     }
 }

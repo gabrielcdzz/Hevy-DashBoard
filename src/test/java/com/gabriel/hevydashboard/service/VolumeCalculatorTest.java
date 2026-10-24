@@ -18,16 +18,14 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static java.util.Map.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VolumeCalculatorTest {
-
-    private static final List<IgnoreRule> AJUSTES = List.of(new IgnoreRule("forearms", CountType.INDIRECT));
 
     /** As 5 rotinas reais e os templates dos exercícios delas, salvos da API em 24/10/2026. */
     private static List<Routine> rotinas;
@@ -45,25 +43,21 @@ class VolumeCalculatorTest {
 
     @Test
     void volumePlanejadoDasCincoRotinasBateComOConferidoNoHevy() {
-        VolumeCalculator calculator = new VolumeCalculator(templates, AJUSTES);
+        VolumeCalculator calculator = new VolumeCalculator(templates, VolumeRules.DEFAULT);
 
         Map<String, MuscleVolume> volume = calculator.volumeOf(todosOsExercicios(rotinas));
 
         Map<String, MuscleVolume> esperado = Map.ofEntries(
-                entry("shoulders", new MuscleVolume(19, 2)),
+                entry("shoulders", new MuscleVolume(19, 0)),
                 entry("biceps", new MuscleVolume(11, 10)),
+                entry("back", new MuscleVolume(10, 0)),
                 entry("triceps", new MuscleVolume(8, 6)),
-                entry("upper_back", new MuscleVolume(6, 10)),
                 entry("abdominals", new MuscleVolume(6, 0)),
+                entry("hamstrings", new MuscleVolume(6, 0)),
                 entry("chest", new MuscleVolume(5, 0)),
-                entry("lats", new MuscleVolume(4, 9)),
                 entry("forearms", new MuscleVolume(4, 0)),
-                entry("quadriceps", new MuscleVolume(4, 3)),
-                entry("glutes", new MuscleVolume(3, 0)),
-                entry("hamstrings", new MuscleVolume(3, 3)),
-                entry("calves", new MuscleVolume(3, 3)),
-                entry("lower_back", new MuscleVolume(0, 3)),
-                entry("traps", new MuscleVolume(0, 3)));
+                entry("quadriceps", new MuscleVolume(4, 0)),
+                entry("calves", new MuscleVolume(3, 0)));
         assertEquals(esperado, volume);
     }
 
@@ -82,7 +76,7 @@ class VolumeCalculatorTest {
 
     @Test
     void somaDasDiretasEIgualAoTotalDeSeriesDeTrabalho() {
-        VolumeCalculator calculator = new VolumeCalculator(templates, AJUSTES);
+        VolumeCalculator calculator = new VolumeCalculator(templates, VolumeRules.DEFAULT);
 
         int diretas = calculator.volumeOf(todosOsExercicios(rotinas)).values().stream()
                 .mapToInt(MuscleVolume::direct)
@@ -91,37 +85,29 @@ class VolumeCalculatorTest {
         assertEquals(76, diretas);
     }
 
-    @Test
-    void semOAjusteAntebracoTeria16Indiretas() {
-        VolumeCalculator semAjustes = new VolumeCalculator(templates, List.of());
-
-        MuscleVolume antebraco = semAjustes.volumeOf(todosOsExercicios(rotinas)).get("forearms");
-
-        assertEquals(new MuscleVolume(4, 16), antebraco);
-    }
-
     // ------------------------------------------------------------------
     // Regras isoladas, com dados pequenos montados no teste
     // ------------------------------------------------------------------
 
     private static final ExerciseTemplate SUPINO = template("supino", "chest", "triceps", "shoulders");
     private static final ExerciseTemplate ROSCA_MARTELO = template("rosca", "biceps", "forearms");
+    private static final ExerciseTemplate REMADA = template("remada", "upper_back", "lats", "biceps", "forearms");
+    private static final ExerciseTemplate PULLDOWN = template("pulldown", "lats", "upper_back", "biceps");
 
     @Test
     void aquecimentoNaoConta() {
-        VolumeCalculator calculator = new VolumeCalculator(List.of(SUPINO), List.of());
+        VolumeCalculator calculator = new VolumeCalculator(List.of(SUPINO), VolumeRules.DEFAULT);
 
         Map<String, MuscleVolume> volume = calculator.volumeOf(List.of(
                 exercicio("supino", "warmup", "warmup", "normal", "normal")));
 
         assertEquals(new MuscleVolume(2, 0), volume.get("chest"));
         assertEquals(new MuscleVolume(0, 2), volume.get("triceps"));
-        assertEquals(new MuscleVolume(0, 2), volume.get("shoulders"));
     }
 
     @Test
     void falhaEDropsetContam() {
-        VolumeCalculator calculator = new VolumeCalculator(List.of(SUPINO), List.of());
+        VolumeCalculator calculator = new VolumeCalculator(List.of(SUPINO), VolumeRules.DEFAULT);
 
         Map<String, MuscleVolume> volume = calculator.volumeOf(List.of(
                 exercicio("supino", "normal", "failure", "dropset")));
@@ -131,7 +117,7 @@ class VolumeCalculatorTest {
 
     @Test
     void exercicioSoComAquecimentoNaoApareceNoVolume() {
-        VolumeCalculator calculator = new VolumeCalculator(List.of(SUPINO), List.of());
+        VolumeCalculator calculator = new VolumeCalculator(List.of(SUPINO), VolumeRules.DEFAULT);
 
         Map<String, MuscleVolume> volume = calculator.volumeOf(List.of(exercicio("supino", "warmup")));
 
@@ -139,18 +125,48 @@ class VolumeCalculatorTest {
     }
 
     @Test
-    void antebracoIndiretoIgnoradoMasBicepsContaNormal() {
-        VolumeCalculator calculator = new VolumeCalculator(List.of(ROSCA_MARTELO), AJUSTES);
+    void secundarioForaDaListaDeIndiretasNaoConta() {
+        VolumeCalculator calculator = new VolumeCalculator(List.of(SUPINO, ROSCA_MARTELO), VolumeRules.DEFAULT);
 
-        Map<String, MuscleVolume> volume = calculator.volumeOf(List.of(exercicio("rosca", "normal", "normal")));
+        Map<String, MuscleVolume> volume = calculator.volumeOf(List.of(
+                exercicio("supino", "normal", "normal"),
+                exercicio("rosca", "normal", "normal")));
 
-        assertEquals(new MuscleVolume(2, 0), volume.get("biceps"));
-        assertFalse(volume.containsKey("forearms"));
+        // Supino: tríceps entra, ombro não. Rosca martelo: antebraço não entra.
+        assertEquals(Map.of(
+                "chest", new MuscleVolume(2, 0),
+                "triceps", new MuscleVolume(0, 2),
+                "biceps", new MuscleVolume(2, 0)), volume);
+    }
+
+    @Test
+    void dorsalECostasSuperioresSaoContadosComoCostas() {
+        VolumeCalculator calculator = new VolumeCalculator(List.of(REMADA, PULLDOWN), VolumeRules.DEFAULT);
+
+        Map<String, MuscleVolume> volume = calculator.volumeOf(List.of(
+                exercicio("remada", "normal", "normal", "normal"),
+                exercicio("pulldown", "normal", "normal")));
+
+        assertEquals(Map.of(
+                "back", new MuscleVolume(5, 0),
+                "biceps", new MuscleVolume(0, 5)), volume);
+    }
+
+    @Test
+    void grupoPrimarioNaoRecebeIndiretaDoProprioExercicio() {
+        // Mesmo com "back" na lista de indiretas, a remada (upper_back; secundário lats)
+        // não pode contar 1 direta e 1 indireta de costas pela mesma série.
+        VolumeRules costasComIndireta = new VolumeRules(Set.of("biceps", "back"), VolumeRules.DEFAULT.muscleGroups());
+        VolumeCalculator calculator = new VolumeCalculator(List.of(REMADA), costasComIndireta);
+
+        Map<String, MuscleVolume> volume = calculator.volumeOf(List.of(exercicio("remada", "normal")));
+
+        assertEquals(new MuscleVolume(1, 0), volume.get("back"));
     }
 
     @Test
     void templateDesconhecidoLancaExcecao() {
-        VolumeCalculator calculator = new VolumeCalculator(List.of(SUPINO), List.of());
+        VolumeCalculator calculator = new VolumeCalculator(List.of(SUPINO), VolumeRules.DEFAULT);
 
         assertThrows(IllegalArgumentException.class,
                 () -> calculator.volumeOf(List.of(exercicio("nao-existe", "normal"))));
@@ -158,7 +174,7 @@ class VolumeCalculatorTest {
 
     @Test
     void volumeSemanalSeparaOsTreinosPelaSegundaFeira() {
-        VolumeCalculator calculator = new VolumeCalculator(List.of(SUPINO, ROSCA_MARTELO), AJUSTES);
+        VolumeCalculator calculator = new VolumeCalculator(List.of(SUPINO, ROSCA_MARTELO), VolumeRules.DEFAULT);
 
         // Domingo 25/10 às 22h em Brasília (segunda 01h em UTC) ainda é a semana de 19/10.
         Workout domingoANoite = treino("2026-10-26T01:00:00Z", exercicio("supino", "normal", "normal"));

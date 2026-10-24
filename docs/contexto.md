@@ -30,9 +30,9 @@ Fluxo: **Hevy API → Java → Google Sheets → Looker Studio**, rodando no **G
 
 1. **Série válida = série de trabalho.** Conta tudo cujo `type` não é `warmup`: entram `normal`, `failure` e `dropset`.
 2. **Série direta:** 1 série para o músculo primário do exercício (`primary_muscle_group` do template).
-3. **Série indireta:** 1 série para cada músculo secundário (`secondary_muscle_groups`), contada em campo separado.
-   - Exemplo: supino inclinado (primário `chest`, secundários `triceps` e `shoulders`) com 2 séries de trabalho = 2 diretas de peito, 2 indiretas de tríceps e 2 indiretas de ombro.
-4. **Ajustes manuais:** antebraço (`forearms`) indireto é ignorado. O Hevy marca antebraço como secundário em quase toda puxada e rosca, o que inflava o número (dava 16 indiretas). O antebraço conta só as séries diretas.
+3. **Série indireta:** conta **só para bíceps e tríceps** (decisão de 24/10/2026). Bíceps recebe das puxadas e tríceps dos empurrões. Os outros secundários do Hevy (ombro no supino, antebraço nas roscas, lombar no stiff, panturrilha no leg curl) são ignorados, porque trabalham pouco e só inflavam os números.
+   - Exemplo: supino inclinado (primário `chest`, secundários `triceps` e `shoulders`) com 2 séries de trabalho = 2 diretas de peito e 2 indiretas de tríceps.
+4. **Agrupamento:** `lats` (dorsal) e `upper_back` (costas superiores) são contados juntos como `back` (costas), porque trabalham juntos em quase todo exercício de costas. Um mesmo grupo recebe indireta no máximo uma vez por exercício e nunca recebe indireta do próprio exercício em que é o primário.
 5. **Formato de exibição:** `Bíceps: 11 diretas (indiretas 10)`.
 6. **Janela:** semana completa, de segunda a domingo, no fuso de Brasília.
 7. **Volume planejado × executado:** o planejado vem das 5 rotinas salvas (aba `volume_rotinas`) e o executado vem dos treinos feitos (aba `volume_semanal`). A regra de contagem é a mesma nos dois.
@@ -40,7 +40,7 @@ Fluxo: **Hevy API → Java → Google Sheets → Looker Studio**, rodando no **G
 
 ### Valores esperados (usar como teste)
 
-Volume planejado das 5 rotinas, uma vez cada, com antebraço indireto ignorado. Conferido com o `set_count` do Hevy em 24/10/2026.
+Volume planejado das 5 rotinas, uma vez cada, com as regras acima. Conferido com o `set_count` do Hevy em 24/10/2026, já com o Straight Leg Deadlift no lugar do Deadlift (Smith Machine) na LEGS.
 
 | Rotina | Séries de trabalho | Aquecimento | `set_count` |
 |---|---|---|---|
@@ -53,20 +53,16 @@ Volume planejado das 5 rotinas, uma vez cada, com antebraço indireto ignorado. 
 
 | Músculo (Hevy) | Diretas | Indiretas |
 |---|---|---|
-| shoulders | 19 | 2 |
+| shoulders | 19 | 0 |
 | biceps | 11 | 10 |
+| back (lats + upper_back) | 10 | 0 |
 | triceps | 8 | 6 |
-| upper_back | 6 | 10 |
 | abdominals | 6 | 0 |
+| hamstrings | 6 | 0 |
 | chest | 5 | 0 |
-| lats | 4 | 9 |
-| forearms | 4 | 0 (ignorado, seria 16) |
-| quadriceps | 4 | 3 |
-| glutes | 3 | 0 |
-| hamstrings | 3 | 3 |
-| calves | 3 | 3 |
-| lower_back | 0 | 3 |
-| traps | 0 | 3 |
+| forearms | 4 | 0 |
+| quadriceps | 4 | 0 |
+| calves | 3 | 0 |
 
 A soma das diretas (76) é igual ao total de séries de trabalho, e isso deve valer sempre.
 
@@ -88,7 +84,7 @@ A soma das diretas (76) é igual ao total de séries de trabalho, e isso deve va
 | Overhead Triceps Extension (Cable) | B5EFBF9C | triceps | (nenhum) |
 | Triceps Pushdown | 93A552C6 | triceps | (nenhum) |
 | Leg Extension (Machine) | 75A4F6C4 | quadriceps | (nenhum) |
-| Deadlift (Smith Machine) | 20870ED5 | glutes | hamstrings, quadriceps, lower_back, upper_back, lats, traps |
+| Straight Leg Deadlift (stiff) | 2A48E443 | hamstrings | glutes, lower_back, upper_back, lats, ... |
 | Lying Leg Curl (Machine) | B8127AD1 | hamstrings | calves |
 | Standing Calf Raise (Machine) | E05C2C38 | calves | (nenhum) |
 | Hammer Curl (Cable) | 36E8F14E | biceps | forearms |
@@ -109,7 +105,7 @@ A soma das diretas (76) é igual ao total de séries de trabalho, e isso deve va
 |---|---|---|
 | `series_treinos` | Uma linha por série dos treinos executados | Script |
 | `series_rotinas` | Uma linha por série das 5 rotinas (planejado) | Script |
-| `ajustes_manuais` | Exceções de contagem | Usuário |
+| `ajustes_manuais` | Músculos que recebem indireta e agrupamento de músculos | Usuário (o script cria com os valores iniciais) |
 | `config` | Faixa-alvo por músculo, tabela de fases, parâmetros | Usuário (o script cria com valores iniciais) |
 | `volume_semanal` | Diretas e indiretas por músculo e por semana (executado) | Script (sempre reescrita) |
 | `volume_rotinas` | Diretas e indiretas por músculo, por rotina e total (planejado) | Script (sempre reescrita) |
@@ -118,7 +114,7 @@ Colunas:
 
 - **`series_treinos`:** `workout_id`, `data`, `semana_inicio` (a segunda-feira), `rotina`, `exercicio`, `template_id`, `musculo_primario`, `musculos_secundarios`, `tipo_serie`, `valida`, `carga_kg`, `reps`, `rpe`
 - **`series_rotinas`:** `routine_id`, `rotina`, `exercicio`, `template_id`, `indice_serie`, `tipo_serie`, `valida`, `carga_kg`, `reps`, `musculo_primario`, `musculos_secundarios`
-- **`ajustes_manuais`:** `musculo`, `tipo` (`direta`/`indireta`), `acao` (`ignorar`). Primeira linha: `forearms | indireta | ignorar`.
+- **`ajustes_manuais`:** duas tabelas que viram `VolumeRules` no código. A primeira, `musculos_com_indireta`, começa com `biceps` e `triceps`. A segunda, `agrupamento` (`musculo_hevy`, `grupo`), começa com `lats → back` e `upper_back → back`.
 - **`config`:** faixa-alvo (`musculo`, `min`, `max`, com valores provisórios), fases (`fase`, `inicio`, `fim`, com a primeira linha `cutting | 2026-09-14 | (vazio)`) e semanas sem progressão para o alerta de estagnação (3 ou 4).
 
 As abas `volume_*` nunca devem ser editadas à mão, porque o script as sobrescreve.
@@ -137,7 +133,7 @@ As abas `volume_*` nunca devem ser editadas à mão, porque o script as sobrescr
   2. Treinos: `getWorkoutEventsSince(ultimaSync)`. Em `updated`, substituir as linhas daquele `workout_id`. Em `deleted`, remover as linhas daquele `workout_id`.
   3. Rotinas: o endpoint de eventos não cobre rotinas, então reler as 5 rotinas inteiras a cada execução (é pouco dado).
   4. Templates: buscar para mapear `template_id` → músculos (inclui os 3 exercícios personalizados).
-  5. Recalcular `volume_semanal` e `volume_rotinas` a partir das abas brutas e aplicar `ajustes_manuais`.
+  5. Recalcular `volume_semanal` e `volume_rotinas` a partir das abas brutas, com as regras de `ajustes_manuais`.
   6. Gravar a nova data em `estado_sync`.
 - O cache do Looker Studio é de 15 minutos ou mais, então uma mudança no Hevy aparece no dashboard em até cerca de 1h15.
 
@@ -146,7 +142,7 @@ As abas `volume_*` nunca devem ser editadas à mão, porque o script as sobrescr
 1. ~~Confirmar a conexão real~~ (feito).
 2. ~~**Cálculo de volume (`service`)**~~ (feito em 24/10/2026, `VolumeCalculatorTest` e `WeeksTest` passando):
    - regra de série válida, contagem direta e indireta, ajustes manuais, semana de segunda a domingo em America/Sao_Paulo
-   - testes JUnit, incluindo um teste com as 5 rotinas que confira **exatamente** os números da seção 2, mais casos de borda: treino no domingo à noite em UTC, dropset e falha contam, aquecimento não conta, antebraço indireto ignorado
+   - testes JUnit, incluindo um teste com as 5 rotinas que confira **exatamente** os números da seção 2, mais casos de borda: treino no domingo à noite em UTC, dropset e falha contam, aquecimento não conta, indireta só para bíceps e tríceps, dorsal e costas superiores agrupados
 3. **Configurar o Google Cloud** (o usuário faz, com o Claude guiando passo a passo): criar o projeto, ativar a Google Sheets API, criar a conta de serviço, baixar a credencial JSON (que nunca vai para o repositório; deve ficar em `secrets/`), criar a planilha e compartilhar com o e-mail da conta de serviço.
 4. **Pacote `sheets`:** criar as abas se não existirem, escrever as séries brutas, ler `ajustes_manuais` e `config`, escrever as abas `volume_*`.
 5. **Orquestração (`SyncService` + `Main`):** importação completa na primeira vez, depois incremental, conforme a seção 5.

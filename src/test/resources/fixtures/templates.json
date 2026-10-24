@@ -50,23 +50,6 @@
         "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/05951201-Lever-Seated-Crunch-(chest-pad)_thumbnail@3x.jpg"
     },
     {
-        "id":  "20870ED5",
-        "title":  "Deadlift (Smith Machine)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "glutes",
-        "secondary_muscle_groups":  [
-                                        "hamstrings",
-                                        "quadriceps",
-                                        "lower_back",
-                                        "upper_back",
-                                        "lats",
-                                        "traps"
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/07521201-Smith-Deadlift_Hips-FIX_thumbnail_@3x.jpg"
-    },
-    {
         "id":  "9d23d3d9-7315-43ca-bd83-ddc83fab7185",
         "title":  "Elevação Lateral (Halter) 1",
         "type":  "weight_reps",
@@ -91,18 +74,6 @@
         "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/01651201-Cable-Hammer-Curl-(with-rope)-(male)_Forearms_thumbnail_@3x.jpg"
     },
     {
-        "id":  "BE289E45",
-        "title":  "Lateral Raise (Cable)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "shoulders",
-        "secondary_muscle_groups":  [
-
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/01781201-Cable-Lateral-Raise_shoulder_thumbnail@3x.jpg"
-    },
-    {
         "id":  "473CF5B8",
         "title":  "Lat Pulldown (Machine)",
         "type":  "weight_reps",
@@ -115,6 +86,18 @@
         "equipment":  "machine",
         "is_custom":  false,
         "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/05791201-Lever-Front-Pulldown_Back_thumbnail@3x.jpg"
+    },
+    {
+        "id":  "BE289E45",
+        "title":  "Lateral Raise (Cable)",
+        "type":  "weight_reps",
+        "primary_muscle_group":  "shoulders",
+        "secondary_muscle_groups":  [
+
+                                    ],
+        "equipment":  "machine",
+        "is_custom":  false,
+        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/01781201-Cable-Lateral-Raise_shoulder_thumbnail@3x.jpg"
     },
     {
         "id":  "75A4F6C4",
@@ -251,6 +234,22 @@
         "equipment":  "machine",
         "is_custom":  false,
         "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/06051201-Lever-Standing-Calf-Raise_Calves_thumbnail@3x.jpg"
+    },
+    {
+        "id":  "2A48E443",
+        "title":  "Straight Leg Deadlift",
+        "type":  "weight_reps",
+        "primary_muscle_group":  "hamstrings",
+        "secondary_muscle_groups":  [
+                                        "glutes",
+                                        "lower_back",
+                                        "upper_back",
+                                        "lats",
+                                        "traps"
+                                    ],
+        "equipment":  "barbell",
+        "is_custom":  false,
+        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/01161201-Barbell-Straight-Leg-Deadlift_Thighs_thumbnail@3x.jpg"
     },
     {
         "id":  "3edf9228-8d10-4293-b44b-99f19e9a8d1d",

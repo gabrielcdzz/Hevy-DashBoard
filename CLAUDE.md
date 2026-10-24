@@ -43,7 +43,7 @@ java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar     # precisa de HEVY_API_KEY
 
 Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I/O**, para ser testável isoladamente) e `sheets` (Google Sheets, via conta de serviço). Hoje só `client`, `model` e `service` existem.
 
-- `service/VolumeCalculator`: recebe templates e `IgnoreRule`s no construtor. `volumeOf(exercícios)` devolve `Map<músculo, MuscleVolume>`, e `weeklyVolume(treinos, zona)` agrupa por segunda-feira (`Weeks.startOf`). Template desconhecido lança `IllegalArgumentException` em vez de contar errado.
+- `service/VolumeCalculator`: recebe templates e `VolumeRules` (músculos com indireta e agrupamento) no construtor. `volumeOf(exercícios)` devolve `Map<músculo, MuscleVolume>`, e `weeklyVolume(treinos, zona)` agrupa por segunda-feira (`Weeks.startOf`). Template desconhecido lança `IllegalArgumentException` em vez de contar errado.
 - `src/test/resources/fixtures/`: as 5 rotinas reais e os 22 templates delas, salvos da API em 24/10/2026. São a base do teste que confere os números de `docs/contexto.md`. Se as rotinas mudarem no Hevy, a fixture e os números esperados mudam juntos.
 
 - `client/HevyClient`: cliente HTTP somente leitura para `https://api.hevyapp.com/v1`.
@@ -57,8 +57,8 @@ Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I
 ## Regras de cálculo (decididas, não mudar sem o usuário pedir)
 
 - Série válida é toda série que não seja `warmup`. Séries `failure` e `dropset` contam.
-- Série direta conta para o `primaryMuscleGroup` do template. Série indireta conta, em campo separado, para cada item de `secondaryMuscleGroups`.
-- `forearms` indireto é ignorado (regra da aba `ajustes_manuais`). Antebraço conta só as séries diretas.
+- Série direta conta para o `primaryMuscleGroup` do template. Série indireta conta, em campo separado, **só para bíceps e tríceps**. Os outros secundários do Hevy são ignorados.
+- `lats` e `upper_back` são contados juntos como `back`. Essas regras ficam em `VolumeRules.DEFAULT` e depois vão ser lidas da aba `ajustes_manuais`.
 - A semana vai de segunda a domingo, no fuso **America/Sao_Paulo**. O Hevy grava em UTC, e um treino às 22h de domingo não pode cair na semana seguinte.
 - Séries com carga 0 ou sem repetições contam no volume, mas são ignoradas na tonelagem, no 1RM e nos PRs.
 - 1RM estimado pela fórmula de Epley: `carga × (1 + reps / 30)`.
