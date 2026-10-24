@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hevy Dashboard</title>
+  <meta name="description" content="Dashboard de treinos do Hevy: volume semanal por músculo, evolução de carga, recordes e consistência.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <h1>Hevy Dashboard</h1>
+      <span class="meta" id="meta"></span>
+      <span class="spacer"></span>
+      <button class="icon-btn" id="theme-btn" type="button" aria-label="Alternar tema claro e escuro">Tema</button>
+    </header>
+
+    <div id="banner"></div>
+
+    <nav class="tabs" role="tablist" aria-label="Seções do dashboard">
+      <button class="tab" role="tab" id="tab-visao-geral" aria-controls="panel" data-tab="visao-geral">Visão geral</button>
+      <button class="tab" role="tab" id="tab-exercicios" aria-controls="panel" data-tab="exercicios">Exercícios</button>
+      <button class="tab" role="tab" id="tab-analise" aria-controls="panel" data-tab="analise">Análise</button>
+    </nav>
+
+    <section class="filters" aria-label="Filtros">
+      <div class="field"><label for="f-period">Período</label><select id="f-period"></select></div>
+      <div class="field"><label for="f-muscle">Músculo</label><select id="f-muscle"></select></div>
+      <div class="field"><label for="f-exercise">Exercício</label><select id="f-exercise"></select></div>
+    </section>
+
+    <main id="panel" role="tabpanel" tabindex="-1"></main>
+
+    <footer class="footer" id="footer"></footer>
+  </div>
+
+  <div id="tip" role="status" aria-live="polite"></div>
+
+  <noscript>Este dashboard precisa de JavaScript para exibir os gráficos.</noscript>
+  <script src="vendor/chart.umd.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

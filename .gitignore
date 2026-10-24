@@ -25,3 +25,6 @@ credentials*.json
 # Editor
 .vscode/
 .idea/
+
+# Dados reais de treino do dashboard (nunca vão para o Git; os de exemplo, sample.json, vão)
+site/data/dashboard.json

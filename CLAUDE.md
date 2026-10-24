@@ -11,7 +11,7 @@ Documentação do projeto:
 - `docs/contexto.md`: decisões tomadas, regras de cálculo, **valores esperados para testes**, estrutura da planilha, lógica de sincronização e próximas etapas. Leia antes de começar uma etapa nova.
 - `docs/plano.md`: especificação original (abas e métricas do dashboard). Em caso de conflito, vale o `contexto.md`.
 
-Hoje o `Main` só faz um teste de conexão. O cálculo de volume (`service`) está pronto; a próxima etapa é configurar o Google Cloud e escrever o pacote `sheets`.
+Estado: cliente do Hevy, planilha, todas as métricas (`service`), exportação (`export`) e o site (`site/`) estão prontos e testados com dados de exemplo. Falta ligar os dados reais: o `SyncService` (sincronização incremental + exportação) no `Main`, o workflow do GitHub Actions que publica o site, e o README. `Main sample` gera os dados de exemplo; sem argumentos, o `Main` ainda só testa a conexão.
 
 ## Como trabalhar com o usuário
 
@@ -80,6 +80,15 @@ Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I
 - 1RM estimado pela fórmula de Epley: `carga × (1 + reps / 30)`.
 - A soma das diretas é sempre igual ao total de séries válidas. Os valores esperados das 5 rotinas estão em `docs/contexto.md` e devem virar teste.
 - O volume baixo de peito é proposital. Não tratar como alerta nem sugerir mudança.
+
+## Dashboard web (`site/`) e exportação (`export/`)
+
+- `export/DashboardData` é **o contrato** entre o Java e o site: um registro com todas as seções (`weeks`, `volume`, `exercises`, `prEvents`, `calendar`, `plannedVolume`, `phases`, `config`...). Mudou um campo ali, mude o JavaScript junto. `DashboardExporter.build(Input)` monta o registro a partir de `SetRecord`s e `Settings` (arredonda para 1 casa, usa `snake`/minúsculas nos enums, omite campos nulos); `toJson`/`write` gravam o arquivo.
+- `export/SampleData` gera um usuário **fictício** e determinístico (60 semanas, progressão, platôs, deload, semana parada) e o passa pelo mesmo caminho dos dados reais. `java -jar target/*.jar sample` grava `site/data/sample.json`, que **vai para o Git**. Depois de mudar `DashboardData` ou `SampleData`, regenere e commite o `sample.json`.
+- O site é HTML, CSS e JavaScript puros (módulos ES), sem build. `site/vendor/chart.umd.js` é o Chart.js 4.4.7 copiado para o repositório (MIT, licença em `site/vendor/`).
+- `site/js/data.js` tenta `data/dashboard.json` (dados reais, **no `.gitignore`**, nunca commitar) e, se não existir, usa `data/sample.json`. O 404 do primeiro no console é esperado.
+- Regras do site: texto vindo dos dados entra no DOM por `textContent`/nós de texto, nunca `innerHTML`; todo gráfico tem a tabela equivalente (`card({ table })`, botão "Ver tabela"); status (abaixo, dentro, acima, progredindo, estagnado) sempre com ícone e texto; um eixo por gráfico; cores só pelas variáveis CSS (`--s1`, `--band`, `--heat-*`...), que têm valores para claro e escuro; os filtros (período, músculo, exercício) ficam em uma linha só e valem para todos os cartões; um cartão só desenha depois de estar no documento (`card.render()`).
+- Para ver o site: `npx serve site` (o `file://` não carrega os JSON). Para testar de verdade, use o Chrome sem janela via `puppeteer-core`: abra `http://localhost:PORTA/#exercicios`, capture erros do console e tire capturas de tela em claro, escuro e 390 px de largura. Confira sempre a imagem, o código sozinho não mostra colisões de rótulos.
 
 ## Segredos
 
