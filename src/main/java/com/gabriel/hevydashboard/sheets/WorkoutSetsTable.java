@@ -6,7 +6,6 @@ import com.gabriel.hevydashboard.model.WorkoutEvent;
 import com.gabriel.hevydashboard.service.SetRecord;
 import com.gabriel.hevydashboard.service.SetRecords;
 
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -19,6 +18,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static com.gabriel.hevydashboard.sheets.Cells.bool;
+import static com.gabriel.hevydashboard.sheets.Cells.date;
+import static com.gabriel.hevydashboard.sheets.Cells.doubleOrNull;
+import static com.gabriel.hevydashboard.sheets.Cells.integerOrNull;
+import static com.gabriel.hevydashboard.sheets.Cells.text;
 
 /**
  * A aba "series_treinos": uma linha por série de cada treino executado.
@@ -54,9 +59,6 @@ public class WorkoutSetsTable {
     private static final int REPS = 11;
     private static final int RPE = 12;
     private static final int DURATION = 13;
-
-    /** O Sheets conta as datas em dias desde 30/12/1899. */
-    private static final LocalDate SHEETS_EPOCH = LocalDate.of(1899, 12, 30);
 
     private final SheetsGateway gateway;
     private final Map<String, ExerciseTemplate> templatesById;
@@ -200,41 +202,5 @@ public class WorkoutSetsTable {
     /** O Sheets recebe "" nas células vazias; null viraria um valor estranho no JSON. */
     private static Object emptyIfNull(Object value) {
         return value == null ? "" : value;
-    }
-
-    // ------------------------------------------------------------------
-    // Leitura de células
-    // ------------------------------------------------------------------
-
-    private static String text(List<Object> row, int column) {
-        Object value = column < row.size() ? row.get(column) : null;
-        return value == null ? "" : String.valueOf(value).trim();
-    }
-
-    private static LocalDate date(List<Object> row, int column) {
-        Object value = column < row.size() ? row.get(column) : null;
-        if (value instanceof Number number) {
-            return SHEETS_EPOCH.plusDays(number.longValue());
-        }
-        return LocalDate.parse(text(row, column));
-    }
-
-    private static boolean bool(List<Object> row, int column) {
-        Object value = column < row.size() ? row.get(column) : null;
-        return value instanceof Boolean b ? b : "true".equalsIgnoreCase(text(row, column));
-    }
-
-    private static Double doubleOrNull(List<Object> row, int column) {
-        Object value = column < row.size() ? row.get(column) : null;
-        if (value instanceof Number number) {
-            return number.doubleValue();
-        }
-        String text = text(row, column);
-        return text.isEmpty() ? null : Double.valueOf(text);
-    }
-
-    private static Integer integerOrNull(List<Object> row, int column) {
-        Double value = doubleOrNull(row, column);
-        return value == null ? null : (int) Math.round(value);
     }
 }

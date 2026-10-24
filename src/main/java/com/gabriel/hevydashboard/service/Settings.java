@@ -1,5 +1,7 @@
 package com.gabriel.hevydashboard.service;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -20,5 +22,23 @@ public record Settings(
 
     public Settings {
         targets = Map.copyOf(targets);
+    }
+
+    /**
+     * Os valores iniciais: os que uma planilha nova recebe e os que os dados de exemplo usam.
+     * O peito fica em baixo volume de propósito; os demais músculos, em 10 a 20 séries diretas.
+     */
+    public static Settings defaults() {
+        Map<String, TargetRange> targets = new HashMap<>();
+        targets.put("chest", new TargetRange(1, 9));
+        for (String muscle : List.of("back", "shoulders", "biceps", "triceps", "quadriceps",
+                "hamstrings", "glutes", "calves", "abdominals", "forearms")) {
+            targets.put(muscle, new TargetRange(10, 20));
+        }
+        VolumeLevels levels = new VolumeLevels(List.of(
+                new VolumeLevel("baixo", new TargetRange(1, 9)),
+                new VolumeLevel("moderado", new TargetRange(10, 20)),
+                new VolumeLevel("alto", new TargetRange(21, TargetRange.NO_LIMIT))));
+        return new Settings(VolumeRules.DEFAULT, targets, levels, 3, 5);
     }
 }

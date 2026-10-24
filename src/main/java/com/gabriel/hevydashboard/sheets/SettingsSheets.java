@@ -1,11 +1,14 @@
 package com.gabriel.hevydashboard.sheets;
 
+import com.gabriel.hevydashboard.service.Phase;
 import com.gabriel.hevydashboard.service.Settings;
 import com.gabriel.hevydashboard.service.TargetRange;
 import com.gabriel.hevydashboard.service.VolumeLevel;
 import com.gabriel.hevydashboard.service.VolumeLevels;
 import com.gabriel.hevydashboard.service.VolumeRules;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -33,10 +36,13 @@ public class SettingsSheets {
 
     private static final String INDIRECT = "indireta";
     private static final String GROUPING = "agrupamento";
+    /** Os valores iniciais ficam em {@link Settings#defaults()}, usados também pelos dados de exemplo. */
+    private static final Settings DEFAULTS = Settings.defaults();
+
     private static final String STAGNATION_KEY = "semanas_estagnacao";
-    private static final int DEFAULT_STAGNATION_WEEKS = 3;
+    private static final int DEFAULT_STAGNATION_WEEKS = DEFAULTS.stagnationWeeks();
     private static final String WORKOUTS_KEY = "treinos_por_semana";
-    private static final int DEFAULT_WORKOUTS_PER_WEEK = 5;
+    private static final int DEFAULT_WORKOUTS_PER_WEEK = DEFAULTS.workoutsPerWeek();
 
     private final SheetsGateway gateway;
 
@@ -62,6 +68,41 @@ public class SettingsSheets {
                 readConfigNumber(WORKOUTS_KEY, DEFAULT_WORKOUTS_PER_WEEK));
     }
 
+    /**
+     * As fases (aba "fases"). Só o dashboard usa, para marcar nos gráficos. Uma fase sem início é erro;
+     * sem fim, é a fase em andamento.
+     */
+    public List<Phase> loadPhases() {
+        gateway.ensureSheets(List.of(PHASES));
+        seedIfEmpty(PHASES, phasesSeed());
+        List<List<Object>> rows = gateway.readTypedRows(PHASES);
+        List<Phase> phases = new ArrayList<>();
+        for (int i = 1; i < rows.size(); i++) {
+            List<Object> row = rows.get(i);
+            if (row.stream().allMatch(c -> String.valueOf(c).isBlank())) {
+                continue;
+            }
+            String name = requireText(PHASES, i, "fase", Cells.text(row, 0));
+            LocalDate start;
+            try {
+                start = Cells.dateOrNull(row, 1);
+            } catch (DateTimeParseException e) {
+                throw invalid(PHASES, i, "a data de início \"" + Cells.text(row, 1) + "\" não é válida. Use o formato 2026-09-14");
+            }
+            if (start == null) {
+                throw invalid(PHASES, i, "a coluna \"inicio\" está vazia");
+            }
+            LocalDate end;
+            try {
+                end = Cells.dateOrNull(row, 2);
+            } catch (DateTimeParseException e) {
+                throw invalid(PHASES, i, "a data de fim \"" + Cells.text(row, 2) + "\" não é válida. Use o formato 2026-09-14");
+            }
+            phases.add(new Phase(name, start, end));
+        }
+        return phases;
+    }
+
     // ------------------------------------------------------------------
     // Valores iniciais
     // ------------------------------------------------------------------
@@ -78,24 +119,26 @@ public class SettingsSheets {
         return rows;
     }
 
-    /** Faixa-alvo de séries diretas por semana. O peito fica em baixo volume de propósito. */
     private static List<List<Object>> targetsSeed() {
         List<List<Object>> rows = new ArrayList<>();
         rows.add(List.of("musculo", "min", "max"));
-        rows.add(List.of("chest", 1, 9));
-        for (String muscle : List.of("back", "shoulders", "biceps", "triceps", "quadriceps",
-                "hamstrings", "glutes", "calves", "abdominals", "forearms")) {
-            rows.add(List.of(muscle, 10, 20));
-        }
+        DEFAULTS.targets().entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(e -> rows.add(List.of(e.getKey(), e.getValue().min(), limitCell(e.getValue()))));
         return rows;
     }
 
     private static List<List<Object>> levelsSeed() {
-        return List.of(
-                List.of("nivel", "min", "max"),
-                List.of("baixo", 1, 9),
-                List.of("moderado", 10, 20),
-                List.of("alto", 21, ""));
+        List<List<Object>> rows = new ArrayList<>();
+        rows.add(List.of("nivel", "min", "max"));
+        DEFAULTS.levels().levels()
+                .forEach(level -> rows.add(List.of(level.name(), level.range().min(), limitCell(level.range()))));
+        return rows;
+    }
+
+    /** O teto como vai para a planilha: vazio quando não há limite. */
+    private static Object limitCell(TargetRange range) {
+        return range.max() == TargetRange.NO_LIMIT ? "" : range.max();
     }
 
     private static List<List<Object>> phasesSeed() {

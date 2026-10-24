@@ -1,10 +1,12 @@
 package com.gabriel.hevydashboard.sheets;
 
+import com.gabriel.hevydashboard.service.Phase;
 import com.gabriel.hevydashboard.service.Settings;
 import com.gabriel.hevydashboard.service.TargetRange;
 import com.gabriel.hevydashboard.service.VolumeRules;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
@@ -53,6 +55,53 @@ class SettingsSheetsTest {
 
         assertEquals(4, configuracao.load().workoutsPerWeek());
         assertEquals(3, planilha.sheets.get("config").size()); // nada foi acrescentado
+    }
+
+    @Test
+    void umaPlanilhaNovaRecebeExatamenteOsValoresPadrao() {
+        assertEquals(Settings.defaults(), configuracao.load());
+    }
+
+    @Test
+    void fasesIniciaisTemACuttingEmAndamento() {
+        List<Phase> fases = configuracao.loadPhases();
+
+        assertEquals(List.of(new Phase("cutting", LocalDate.of(2026, 9, 14), null)), fases);
+    }
+
+    @Test
+    void leFasesComDatasEmTextoOuComoNumeroDeSerieDoSheets() {
+        planilha.ensureSheets(List.of("fases"));
+        planilha.replaceRows("fases", List.of(
+                List.of("fase", "inicio", "fim"),
+                List.of("bulking", "2026-01-05", "2026-09-13"),
+                List.of("", "", ""),                       // linha em branco no meio é ignorada
+                List.of("cutting", "2026-09-14", "")), SheetsGateway.InputMode.TYPED);
+
+        List<Phase> fases = configuracao.loadPhases();
+
+        assertEquals(List.of(
+                new Phase("bulking", LocalDate.of(2026, 1, 5), LocalDate.of(2026, 9, 13)),
+                new Phase("cutting", LocalDate.of(2026, 9, 14), null)), fases);
+    }
+
+    @Test
+    void faseSemInicioOuComDataInvalidaDaErroComALinha() {
+        planilha.ensureSheets(List.of("fases"));
+        planilha.replaceRows("fases", List.of(
+                List.of("fase", "inicio", "fim"),
+                List.of("cutting", "14/09", "")), SheetsGateway.InputMode.TYPED);
+
+        IllegalStateException erro = assertThrows(IllegalStateException.class, configuracao::loadPhases);
+
+        assertTrue(erro.getMessage().contains("fases"));
+        assertTrue(erro.getMessage().contains("linha 2"));
+        assertTrue(erro.getMessage().contains("14/09"));
+
+        planilha.replaceRows("fases", List.of(
+                List.of("fase", "inicio", "fim"),
+                List.of("cutting", "", "")), SheetsGateway.InputMode.TYPED);
+        assertTrue(assertThrows(IllegalStateException.class, configuracao::loadPhases).getMessage().contains("inicio"));
     }
 
     @Test
