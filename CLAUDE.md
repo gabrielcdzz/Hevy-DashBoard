@@ -41,7 +41,10 @@ java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar     # precisa de HEVY_API_KEY
 
 ## Arquitetura
 
-Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I/O**, para ser testável isoladamente) e `sheets` (Google Sheets, via conta de serviço). Hoje `sheets` só tem a conexão (`SheetsClient.fromEnvironment`, título e abas da planilha); a escrita das abas vem a seguir.
+Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I/O**, para ser testável isoladamente) e `sheets` (Google Sheets, via conta de serviço). Em `sheets`, já existem a conexão, a leitura/escrita genérica de abas e o `SyncState`. Faltam as abas de séries, de ajustes e de volume.
+
+- `sheets/SheetsGateway`: a interface do que o código precisa da planilha (`ensureSheets`, `readRows`, `replaceRows`). O resto do código depende dela, nunca do `SheetsClient`, para os testes usarem `InMemorySheets` (em `src/test`) e não chamarem o Google. `replaceRows` tem dois modos: `RAW` (texto exato, para dados de controle) e `TYPED` (o Sheets interpreta datas e números, para as abas que o Looker Studio vai ler).
+- `sheets/SyncState`: guarda a data da última sincronização na aba `estado_sync`. Aba vazia = nunca sincronizou = importar o histórico inteiro. Ao testar contra a planilha real, **deixe a aba só com o cabeçalho** (`chave | valor`), senão a primeira sincronização pula o histórico.
 
 - `sheets/SheetsClient`: autentica com `ServiceAccountCredentials` (do `google-auth-library`, que já vem com o `google-api-client`). Lê o caminho do JSON em `GOOGLE_APPLICATION_CREDENTIALS` e o ID em `SPREADSHEET_ID`. Toda chamada passa por `execute`, que transforma 403 e 404 em `SheetsException` com uma mensagem que diz o que corrigir. No GitHub Actions, o secret com o JSON será gravado num arquivo temporário apontado pela mesma variável.
 

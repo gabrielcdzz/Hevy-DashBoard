@@ -119,7 +119,7 @@ Colunas:
 
 As abas `volume_*` nunca devem ser editadas à mão, porque o script as sobrescreve.
 
-**Proposta ainda não discutida com o usuário:** guardar a data da última sincronização numa aba `estado_sync`. O GitHub Actions não guarda estado entre execuções, então essa data precisa ficar em algum lugar.
+**`estado_sync` (decidido e implementado em 24/10/2026):** guarda a data da última sincronização (`chave | valor` e a linha `ultima_sync | 2026-10-24T22:00:00Z`). O GitHub Actions não guarda estado entre execuções, então essa data fica na própria planilha. Foi preferido a um arquivo no repositório, que exigiria um commit do workflow a cada hora.
 
 ## 5. Execução no GitHub Actions
 
