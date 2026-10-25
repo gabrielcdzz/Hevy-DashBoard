@@ -6,7 +6,6 @@ import com.gabriel.hevydashboard.model.Routine;
 import com.gabriel.hevydashboard.model.SetEntry;
 import com.gabriel.hevydashboard.model.Workout;
 import com.gabriel.hevydashboard.service.MuscleVolume;
-import com.gabriel.hevydashboard.service.Phase;
 import com.gabriel.hevydashboard.service.SetRecord;
 import com.gabriel.hevydashboard.service.SetRecords;
 import com.gabriel.hevydashboard.service.Settings;
@@ -101,13 +100,8 @@ public final class SampleData {
         Set<String> routineNames = routineExercises.stream()
                 .map(e -> e.title().trim().toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
 
-        LocalDate firstMonday = Weeks.startOf(today).minusWeeks(WEEKS);
-        List<Phase> phases = List.of(
-                new Phase("bulking", firstMonday, today.minusWeeks(16).minusDays(1)),
-                new Phase("cutting", today.minusWeeks(16), null));
-
         return DashboardExporter.build(new DashboardExporter.Input(
-                sets, settings, phases, planned, routineTemplateIds, routineNames, today, generatedAt, true));
+                sets, settings, planned, routineTemplateIds, routineNames, today, generatedAt, true));
     }
 
     public static Sample generate(LocalDate today) {

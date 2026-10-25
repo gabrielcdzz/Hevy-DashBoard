@@ -8,7 +8,6 @@ import com.gabriel.hevydashboard.model.ExerciseTemplate;
 import com.gabriel.hevydashboard.model.Routine;
 import com.gabriel.hevydashboard.model.WorkoutEvent;
 import com.gabriel.hevydashboard.service.MuscleVolume;
-import com.gabriel.hevydashboard.service.Phase;
 import com.gabriel.hevydashboard.service.SetRecord;
 import com.gabriel.hevydashboard.service.SetRecords;
 import com.gabriel.hevydashboard.service.Settings;
@@ -84,7 +83,6 @@ public class SyncService {
         List<SetRecord> sets = SetRecords.withCurrentTemplates(table.readAll(), templatesById);
         SettingsSheets settingsSheets = new SettingsSheets(sheets);
         Settings settings = settingsSheets.load();
-        List<Phase> phases = settingsSheets.loadPhases();
 
         // As rotinas não têm eventos na API, então são lidas inteiras a cada execução (são poucas).
         List<Routine> routines = hevy.getAllRoutines();
@@ -95,7 +93,7 @@ public class SyncService {
                 .map(e -> e.title().trim().toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
 
         DashboardData data = DashboardExporter.build(new DashboardExporter.Input(
-                sets, settings, phases, planned, routineTemplateIds, routineNames,
+                sets, settings, planned, routineTemplateIds, routineNames,
                 LocalDate.now(clock.withZone(zone)), startedAt, false));
         DashboardExporter.write(data, output);
 

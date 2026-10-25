@@ -77,7 +77,7 @@ class SyncServiceTest {
 
         JsonNode json = new ObjectMapper().readTree(Files.readString(arquivo));
         assertFalse(json.get("sample").asBoolean(), "dados reais não podem sair marcados como exemplo");
-        assertEquals(2, json.get("workouts").size());
+        assertEquals(2, totalDeTreinos(json));
         assertEquals(3, json.get("plannedVolume").get("chest").get("direct").asInt());
         assertTrue(json.get("exercises").get(0).get("inRoutine").asBoolean() || json.get("exercises").get(1).get("inRoutine").asBoolean());
     }
@@ -104,7 +104,7 @@ class SyncServiceTest {
         // Planilha: cabeçalho + 3 linhas do w1 editado (1 aquecimento + 2) + 5 do w3 (1 + 4). As 4 do w1 antigo saíram.
         assertEquals(1 + 3 + 5, planilha.sheets.get(WorkoutSetsTable.SHEET).size());
         JsonNode json = new ObjectMapper().readTree(Files.readString(pasta.resolve("b.json")));
-        assertEquals(2, json.get("workouts").size());
+        assertEquals(2, totalDeTreinos(json));
     }
 
     @Test
@@ -118,8 +118,9 @@ class SyncServiceTest {
 
         assertEquals(1, resultado.sheetUpdate().workoutsRemoved());
         JsonNode json = new ObjectMapper().readTree(Files.readString(pasta.resolve("b.json")));
-        assertEquals(1, json.get("workouts").size());
-        assertEquals("w2", json.get("workouts").get(0).get("id").asText());
+        assertEquals(1, totalDeTreinos(json));
+        // Na planilha só sobraram as linhas do w2.
+        assertEquals(List.of("w2"), planilha.sheets.get(WorkoutSetsTable.SHEET).stream().skip(1).map(linha -> linha.get(0)).distinct().toList());
     }
 
     @Test
@@ -181,6 +182,15 @@ class SyncServiceTest {
     // ------------------------------------------------------------------
     // Auxiliares
     // ------------------------------------------------------------------
+
+    /** Soma dos treinos de todas as semanas do arquivo de dados. */
+    private static int totalDeTreinos(JsonNode json) {
+        int total = 0;
+        for (JsonNode semana : json.get("weeks")) {
+            total += semana.get("workouts").asInt();
+        }
+        return total;
+    }
 
     private static Exercise exercicio(String templateId, String titulo, int seriesDeTrabalho) {
         List<SetEntry> series = new ArrayList<>();

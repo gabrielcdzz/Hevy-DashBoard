@@ -1,19 +1,30 @@
 // Ponto de entrada do dashboard: carrega os dados, liga filtros, abas e tema, e desenha a aba ativa.
-import { loadData, buildModel, PERIODS, exercisesFor } from './data.js';
+import {
+  loadData, buildModel, PERIODS, CUSTOM_PERIOD, MAX_CUSTOM_WEEKS, parseCustomWeeks, exercisesFor,
+} from './data.js';
 import { el, hideTip } from './ui.js';
 import { buildOverview } from './overview.js';
 import { buildExercises } from './exercises.js';
-import { buildAnalysis } from './analysis.js';
 
 const TABS = {
   'visao-geral': buildOverview,
   exercicios: buildExercises,
-  analise: buildAnalysis,
 };
 
-const state = { tab: 'visao-geral', period: 12, muscle: 'all', exercise: null };
+const state = { tab: 'visao-geral', period: '12', customWeeks: 12, muscle: 'all', exercise: null };
 let model = null;
 let cards = [];
+
+/** Os controles dos filtros. A linha de filtros é criada uma vez e mudada de lugar conforme a aba. */
+const ui = {};
+const actions = {
+  filters: null,
+  selectExercise(id) {
+    state.exercise = id;
+    ui.exercise.value = id;
+    render();
+  },
+};
 
 const $ = (id) => document.getElementById(id);
 
@@ -42,7 +53,8 @@ async function main() {
       'Este é um usuário fictício, gerado pelo próprio projeto, para demonstrar o dashboard sem expor treinos reais.'));
   }
 
-  setupFilters();
+  actions.filters = buildFilters();
+  refreshExerciseOptions();
   setupTabs();
   setupTheme();
   window.addEventListener('hashchange', () => selectTab(tabFromHash(), false));
@@ -51,30 +63,73 @@ async function main() {
 
 // ---------- filtros ----------
 
-function setupFilters() {
-  const period = $('f-period');
-  period.replaceChildren(...PERIODS.map((p) => el('option', { value: String(p.value), text: p.label, selected: p.value === state.period })));
-  period.addEventListener('change', () => { state.period = Number(period.value); refresh(); });
+function field(label, control) {
+  return el('div', { class: 'field' }, el('label', { for: control.id, text: label }), control);
+}
 
-  const muscle = $('f-muscle');
-  muscle.replaceChildren(
+function buildFilters() {
+  ui.period = el('select', { id: 'f-period' },
+    PERIODS.map((p) => el('option', { value: p.value, text: p.label })),
+    el('option', { value: CUSTOM_PERIOD, text: 'Personalizado…' }));
+  ui.period.value = state.period;
+
+  ui.weeks = el('input', {
+    id: 'f-weeks', type: 'number', min: '1', max: String(MAX_CUSTOM_WEEKS), step: '1', inputmode: 'numeric',
+    value: String(state.customWeeks), 'aria-describedby': 'f-weeks-help',
+  });
+  ui.muscle = el('select', { id: 'f-muscle' },
     el('option', { value: 'all', text: 'Todos os músculos' }),
-    ...model.muscles.map((m) => el('option', { value: m, text: model.label(m) })));
-  muscle.addEventListener('change', () => { state.muscle = muscle.value; refreshExerciseOptions(); refresh(); });
+    model.muscles.map((m) => el('option', { value: m, text: model.label(m) })));
+  ui.exercise = el('select', { id: 'f-exercise' });
 
-  $('f-exercise').addEventListener('change', (event) => { state.exercise = event.target.value; refresh(); });
-  refreshExerciseOptions();
+  ui.period.addEventListener('change', () => {
+    state.period = ui.period.value;
+    syncCustomField();
+    refresh();
+  });
+  ui.weeks.addEventListener('change', () => {
+    const weeks = parseCustomWeeks(ui.weeks.value);
+    if (weeks === null) {
+      ui.weeks.value = String(state.customWeeks); // valor inválido: volta ao anterior
+      return;
+    }
+    state.customWeeks = weeks;
+    ui.weeks.value = String(weeks);
+    refresh();
+  });
+  ui.muscle.addEventListener('change', () => {
+    state.muscle = ui.muscle.value;
+    refreshExerciseOptions();
+    refresh();
+  });
+  ui.exercise.addEventListener('change', () => {
+    state.exercise = ui.exercise.value;
+    refresh();
+  });
+
+  const section = el('section', { class: 'filters col-12', 'aria-label': 'Filtros' },
+    field('Período', ui.period),
+    field('Semanas', ui.weeks),
+    field('Músculo', ui.muscle),
+    field('Exercício', ui.exercise),
+    el('span', { id: 'f-weeks-help', class: 'visually-hidden', text: `Número de semanas, de 1 a ${MAX_CUSTOM_WEEKS}` }));
+  syncCustomField();
+  return section;
+}
+
+/** O campo de semanas só aparece quando o período é "Personalizado". */
+function syncCustomField() {
+  ui.weeks.closest('.field').hidden = state.period !== CUSTOM_PERIOD;
 }
 
 /** O filtro de exercício lista só os do músculo escolhido; os das rotinas atuais vêm primeiro. */
 function refreshExerciseOptions() {
   const exercises = exercisesFor(model, state);
-  const select = $('f-exercise');
   const group = (label, list) => (list.length
     ? el('optgroup', { label }, list.map((e) => el('option', { value: e.id, text: e.name })))
     : null);
   const byName = (a, b) => a.name.localeCompare(b.name, 'pt-BR');
-  select.replaceChildren(
+  ui.exercise.replaceChildren(
     group('Das rotinas atuais', exercises.filter((e) => e.inRoutine).sort(byName)),
     group('Outros exercícios', exercises.filter((e) => !e.inRoutine).sort(byName)));
 
@@ -83,8 +138,8 @@ function refreshExerciseOptions() {
       Number(b.inRoutine) - Number(a.inRoutine) || b.sessions.length - a.sessions.length)[0];
     state.exercise = mostTrained ? mostTrained.id : null;
   }
-  if (state.exercise) select.value = state.exercise;
-  select.disabled = exercises.length === 0;
+  if (state.exercise) ui.exercise.value = state.exercise;
+  ui.exercise.disabled = exercises.length === 0;
 }
 
 // ---------- abas ----------
@@ -110,7 +165,7 @@ function selectTab(name, updateHash) {
   });
   $('panel').setAttribute('aria-labelledby', `tab-${name}`);
   // O filtro de exercício só faz sentido na aba de exercícios.
-  $('f-exercise').closest('.field').hidden = name !== 'exercicios';
+  ui.exercise.closest('.field').hidden = name !== 'exercicios';
   render();
 }
 
@@ -124,19 +179,16 @@ function refresh() {
 
 function render() {
   hideTip();
+  // Redesenhar troca os elementos; quem estava usando um filtro com o teclado continua nele.
+  const focusedId = document.activeElement && document.activeElement.id;
   cards.forEach((c) => c.destroy && c.destroy());
   const panel = $('panel');
-  const sections = TABS[state.tab](model, state, {
-    selectExercise(id) {
-      state.exercise = id;
-      $('f-exercise').value = id;
-      render();
-    },
-  });
+  const sections = TABS[state.tab](model, state, actions);
   const grid = el('div', { class: 'grid' }, sections);
   panel.replaceChildren(grid);
   cards = [...grid.querySelectorAll('.card')].filter((node) => typeof node.render === 'function');
   cards.forEach((node) => node.render());
+  if (focusedId && focusedId.startsWith('f-') && $(focusedId)) $(focusedId).focus();
 }
 
 // ---------- tema ----------

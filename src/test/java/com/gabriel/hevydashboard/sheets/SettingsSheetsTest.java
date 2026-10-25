@@ -1,12 +1,9 @@
 package com.gabriel.hevydashboard.sheets;
 
-import com.gabriel.hevydashboard.service.Phase;
 import com.gabriel.hevydashboard.service.Settings;
-import com.gabriel.hevydashboard.service.TargetRange;
 import com.gabriel.hevydashboard.service.VolumeRules;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
@@ -20,15 +17,38 @@ class SettingsSheetsTest {
     private final SettingsSheets configuracao = new SettingsSheets(planilha);
 
     @Test
-    void primeiraLeituraCriaAsAbasComOsValoresIniciais() {
+    void primeiraLeituraCriaSoAsAbasQueExistemHojeComOsValoresIniciais() {
         Settings settings = configuracao.load();
 
-        assertTrue(planilha.sheets.keySet().containsAll(List.of(
-                "ajustes_manuais", "faixa_alvo", "niveis_volume", "fases", "config")));
+        assertEquals(Set.of("ajustes_manuais", "config"), planilha.sheets.keySet());
         assertEquals(VolumeRules.DEFAULT, settings.rules());
         assertEquals(3, settings.stagnationWeeks());
-        assertEquals(new TargetRange(1, 9), settings.targets().get("chest"));
-        assertEquals(new TargetRange(10, 20), settings.targets().get("biceps"));
+        assertEquals(5, settings.workoutsPerWeek());
+    }
+
+    @Test
+    void umaPlanilhaNovaRecebeExatamenteOsValoresPadrao() {
+        assertEquals(Settings.defaults(), configuracao.load());
+    }
+
+    @Test
+    void abasDeVersoesAnterioresFicamIntactasESemUso() {
+        // A planilha do usuário ainda tem as abas antigas, com conteúdo. O programa não as lê nem as apaga.
+        planilha.ensureSheets(List.of("faixa_alvo", "niveis_volume", "fases"));
+        planilha.replaceRows("faixa_alvo", List.of(List.of("musculo", "min", "max"), List.of("chest", 1, 9)),
+                SheetsGateway.InputMode.TYPED);
+        planilha.replaceRows("fases", List.of(List.of("fase", "inicio", "fim"), List.of("cutting", "2026-09-14", "")),
+                SheetsGateway.InputMode.TYPED);
+        // Mesmo com conteúdo inválido, elas não podem derrubar a leitura.
+        planilha.replaceRows("niveis_volume", List.of(List.of("nivel", "min", "max"), List.of("baixo", "dez", "")),
+                SheetsGateway.InputMode.TYPED);
+
+        Settings settings = configuracao.load();
+
+        assertEquals(Settings.defaults(), settings);
+        assertEquals(2, planilha.sheets.get("faixa_alvo").size());
+        assertEquals(2, planilha.sheets.get("fases").size());
+        assertEquals("dez", planilha.sheets.get("niveis_volume").get(1).get(1));
     }
 
     @Test
@@ -58,74 +78,16 @@ class SettingsSheetsTest {
     }
 
     @Test
-    void umaPlanilhaNovaRecebeExatamenteOsValoresPadrao() {
-        assertEquals(Settings.defaults(), configuracao.load());
-    }
-
-    @Test
-    void umaPlanilhaNovaNaoTemFasesAindaMasTemOCabecalho() {
-        List<Phase> fases = configuracao.loadPhases();
-
-        assertEquals(List.of(), fases);
-        assertEquals(List.of(List.of("fase", "inicio", "fim")), planilha.sheets.get("fases"));
-    }
-
-    @Test
-    void leFasesComDatasEmTextoOuComoNumeroDeSerieDoSheets() {
-        planilha.ensureSheets(List.of("fases"));
-        planilha.replaceRows("fases", List.of(
-                List.of("fase", "inicio", "fim"),
-                List.of("bulking", "2026-01-05", "2026-09-13"),
-                List.of("", "", ""),                       // linha em branco no meio é ignorada
-                List.of("cutting", "2026-09-14", "")), SheetsGateway.InputMode.TYPED);
-
-        List<Phase> fases = configuracao.loadPhases();
-
-        assertEquals(List.of(
-                new Phase("bulking", LocalDate.of(2026, 1, 5), LocalDate.of(2026, 9, 13)),
-                new Phase("cutting", LocalDate.of(2026, 9, 14), null)), fases);
-    }
-
-    @Test
-    void faseSemInicioOuComDataInvalidaDaErroComALinha() {
-        planilha.ensureSheets(List.of("fases"));
-        planilha.replaceRows("fases", List.of(
-                List.of("fase", "inicio", "fim"),
-                List.of("cutting", "14/09", "")), SheetsGateway.InputMode.TYPED);
-
-        IllegalStateException erro = assertThrows(IllegalStateException.class, configuracao::loadPhases);
-
-        assertTrue(erro.getMessage().contains("fases"));
-        assertTrue(erro.getMessage().contains("linha 2"));
-        assertTrue(erro.getMessage().contains("14/09"));
-
-        planilha.replaceRows("fases", List.of(
-                List.of("fase", "inicio", "fim"),
-                List.of("cutting", "", "")), SheetsGateway.InputMode.TYPED);
-        assertTrue(assertThrows(IllegalStateException.class, configuracao::loadPhases).getMessage().contains("inicio"));
-    }
-
-    @Test
-    void niveisIniciaisSaoBaixoModeradoEAlto() {
-        Settings settings = configuracao.load();
-
-        assertEquals("baixo", settings.levels().classify(9));
-        assertEquals("moderado", settings.levels().classify(10));
-        assertEquals("moderado", settings.levels().classify(20));
-        assertEquals("alto", settings.levels().classify(21));
-    }
-
-    @Test
     void naoSobrescreveAbaQueOUsuarioJaEditou() {
-        planilha.ensureSheets(List.of("faixa_alvo"));
-        planilha.replaceRows("faixa_alvo", List.of(
-                List.of("musculo", "min", "max"),
-                List.of("chest", 12, 16)), SheetsGateway.InputMode.TYPED);
+        planilha.ensureSheets(List.of("ajustes_manuais"));
+        planilha.replaceRows("ajustes_manuais", List.of(
+                List.of("tipo", "musculo", "grupo"),
+                List.of("indireta", "biceps", "")), SheetsGateway.InputMode.TYPED);
 
         Settings settings = configuracao.load();
 
-        assertEquals(new TargetRange(12, 16), settings.targets().get("chest"));
-        assertEquals(1, settings.targets().size());
+        assertEquals(Set.of("biceps"), settings.rules().indirectMuscles()); // sem o tríceps que é do padrão
+        assertEquals(2, planilha.sheets.get("ajustes_manuais").size());
     }
 
     @Test
@@ -154,37 +116,18 @@ class SettingsSheetsTest {
     }
 
     @Test
-    void nivelAltoSemTetoLeComoSemLimite() {
-        Settings settings = configuracao.load();
-
-        assertEquals("alto", settings.levels().classify(500));
-    }
-
-    @Test
     void numeroInvalidoDaErroComAbaELinha() {
-        planilha.ensureSheets(List.of("faixa_alvo"));
-        planilha.replaceRows("faixa_alvo", List.of(
-                List.of("musculo", "min", "max"),
-                List.of("chest", 1, 9),
-                List.of("biceps", "dez", 20)), SheetsGateway.InputMode.TYPED);
+        planilha.ensureSheets(List.of("config"));
+        planilha.replaceRows("config", List.of(
+                List.of("chave", "valor"),
+                List.of("semanas_estagnacao", 3),
+                List.of("treinos_por_semana", "cinco")), SheetsGateway.InputMode.TYPED);
 
         IllegalStateException erro = assertThrows(IllegalStateException.class, configuracao::load);
 
-        assertTrue(erro.getMessage().contains("faixa_alvo"));
+        assertTrue(erro.getMessage().contains("config"));
         assertTrue(erro.getMessage().contains("linha 3"));
-        assertTrue(erro.getMessage().contains("dez"));
-    }
-
-    @Test
-    void maxMenorQueMinDaErro() {
-        planilha.ensureSheets(List.of("niveis_volume"));
-        planilha.replaceRows("niveis_volume", List.of(
-                List.of("nivel", "min", "max"),
-                List.of("baixo", 9, 1)), SheetsGateway.InputMode.TYPED);
-
-        IllegalStateException erro = assertThrows(IllegalStateException.class, configuracao::load);
-
-        assertTrue(erro.getMessage().contains("niveis_volume"));
+        assertTrue(erro.getMessage().contains("cinco"));
     }
 
     @Test

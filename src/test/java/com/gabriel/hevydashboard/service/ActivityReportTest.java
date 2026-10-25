@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -22,99 +21,40 @@ class ActivityReportTest {
     private static final LocalDate S5 = LocalDate.of(2026, 11, 2);
 
     private static Settings settings(int treinosPorSemana) {
-        return new Settings(VolumeRules.DEFAULT, Map.of(),
-                new VolumeLevels(List.of()), 3, treinosPorSemana);
+        return new Settings(VolumeRules.DEFAULT, 3, treinosPorSemana);
     }
 
     // ------------------------------------------------------------------
-    // Treinos, séries, tonelagem e duração
+    // Treinos, séries e duração
     // ------------------------------------------------------------------
 
     @Test
-    void somaTreinosSeriesETonelagemDeCadaSemana() {
+    void somaTreinosESeriesDeTrabalhoDeCadaSemana() {
         List<SetRecord> series = new ArrayList<>();
-        series.add(serie("w1", S1, "chest", "warmup", 20.0, 12));   // aquecimento: fora de tudo
-        series.add(serie("w1", S1, "chest", "normal", 60.0, 8));    // 480 kg
-        series.add(serie("w1", S1, "chest", "normal", 70.0, 5));    // 350 kg
-        series.add(serie("w1", S1, "chest", "normal", null, 15));   // peso corporal: série sim, tonelagem não
-        series.add(serie("w2", S1.plusDays(2), "lats", "normal", 50.0, 10)); // 500 kg
+        series.add(serie("w1", S1, "warmup", 90));    // aquecimento não conta como série
+        series.add(serie("w1", S1, "normal", 90));
+        series.add(serie("w1", S1, "normal", 90));
+        series.add(serie("w2", S1.plusDays(2), "normal", 60));
 
         ActivityReport.WeekSummary semana = ActivityReport.build(series, settings(2), S1.plusDays(5)).weeks().get(0);
 
         assertEquals(2, semana.workouts());
-        assertEquals(4, semana.validSets());
-        assertEquals(1330.0, semana.tonnageKg(), 1e-9);
+        assertEquals(3, semana.validSets());
         assertTrue(semana.complete());
-    }
-
-    @Test
-    void tonelagemPorTreinoIgnoraSeriesSemCargaOuComRepeticoesAbsurdas() {
-        List<SetRecord> series = List.of(
-                serie("w1", S1, "chest", "normal", 60.0, 8),
-                serie("w1", S1, "chest", "normal", 10.0, 101),  // erro de digitação
-                serie("w1", S1, "chest", "normal", 0.0, 10));   // exercício ainda não feito
-
-        ActivityReport.WorkoutSummary treino = ActivityReport.build(series, settings(5), S1).workouts().get(0);
-
-        assertEquals(480.0, treino.tonnageKg(), 1e-9);
-        assertEquals(3, treino.validSets());
     }
 
     @Test
     void duracaoMediaConsideraCadaTreinoUmaVezSoEIgnoraOsSemDuracao() {
         List<SetRecord> series = List.of(
-                serie("w1", S1, "chest", "normal", 60.0, 8, 90),
-                serie("w1", S1, "chest", "normal", 60.0, 8, 90),   // várias séries do mesmo treino: 1 treino
-                serie("w2", S1.plusDays(1), "chest", "normal", 60.0, 8, 60),
-                serie("w3", S1.plusDays(2), "chest", "normal", 60.0, 8, null));
+                serie("w1", S1, "normal", 90),
+                serie("w1", S1, "normal", 90),   // várias séries do mesmo treino: 1 treino
+                serie("w2", S1.plusDays(1), "normal", 60),
+                serie("w3", S1.plusDays(2), "normal", null));
 
         ActivityReport.Result resultado = ActivityReport.build(series, settings(5), S1.plusDays(5));
 
         assertEquals(75.0, resultado.averageDurationMinutes(), 1e-9);
         assertEquals(75.0, resultado.weeks().get(0).averageDurationMinutes(), 1e-9);
-    }
-
-    // ------------------------------------------------------------------
-    // Faixas de repetição e equilíbrio
-    // ------------------------------------------------------------------
-
-    @Test
-    void contaSeriesPorFaixaDeRepeticaoNosLimites() {
-        List<SetRecord> series = new ArrayList<>();
-        for (int reps : new int[]{1, 5, 6, 12, 13, 22}) {
-            series.add(serie("w1", S1, "chest", "normal", 20.0, reps));
-        }
-        series.add(serie("w1", S1, "chest", "warmup", 20.0, 3));    // aquecimento: fora
-        series.add(serie("w1", S1, "chest", "normal", 20.0, 101));  // erro de digitação: fora
-        series.add(serie("w1", S1, "chest", "normal", 20.0, null)); // sem repetições: fora
-
-        ActivityReport.WeekSummary semana = ActivityReport.build(series, settings(5), S1).weeks().get(0);
-
-        assertEquals(2, semana.repsLow());   // 1 e 5
-        assertEquals(2, semana.repsMid());   // 6 e 12
-        assertEquals(2, semana.repsHigh());  // 13 e 22
-    }
-
-    @Test
-    void equilibrioPushPullSuperiorInferiorECore() {
-        List<SetRecord> series = new ArrayList<>();
-        series.add(serie("w1", S1, "chest", "normal", 20.0, 10));
-        series.add(serie("w1", S1, "shoulders", "normal", 20.0, 10));
-        series.add(serie("w1", S1, "triceps", "normal", 20.0, 10));
-        series.add(serie("w1", S1, "lats", "normal", 20.0, 10));        // vira "back": pull
-        series.add(serie("w1", S1, "upper_back", "normal", 20.0, 10));  // vira "back": pull
-        series.add(serie("w1", S1, "quadriceps", "normal", 20.0, 10));
-        series.add(serie("w1", S1, "abdominals", "normal", 20.0, 10));
-        series.add(serie("w1", S1, "chest", "warmup", 20.0, 10));       // aquecimento: fora
-
-        ActivityReport.WeekSummary semana = ActivityReport.build(series, settings(5), S1).weeks().get(0);
-
-        assertEquals(3, semana.pushSets());
-        assertEquals(2, semana.pullSets());
-        assertEquals(1, semana.legsSets());
-        assertEquals(1, semana.coreSets());
-        assertEquals(5, semana.upperSets());
-        assertEquals(1, semana.lowerSets());
     }
 
     // ------------------------------------------------------------------
@@ -198,25 +138,6 @@ class ActivityReportTest {
         assertEquals(1, consistencia.bestStreakWeeks());
     }
 
-    // ------------------------------------------------------------------
-    // Calendário e casos vazios
-    // ------------------------------------------------------------------
-
-    @Test
-    void calendarioTemUmaLinhaPorDiaTreinado() {
-        List<SetRecord> series = new ArrayList<>();
-        series.add(serie("w1", S1, "chest", "normal", 60.0, 8));
-        series.add(serie("w1", S1, "chest", "normal", 60.0, 8));
-        series.add(serie("w2", S1, "lats", "normal", 50.0, 10));            // 2º treino no mesmo dia
-        series.add(serie("w3", S1.plusDays(3), "lats", "warmup", 20.0, 10)); // só aquecimento: 0 séries válidas
-
-        List<ActivityReport.DayActivity> calendario = ActivityReport.build(series, settings(5), S1.plusDays(5)).calendar();
-
-        assertEquals(List.of(
-                new ActivityReport.DayActivity(S1, 2, 3),
-                new ActivityReport.DayActivity(S1.plusDays(3), 1, 0)), calendario);
-    }
-
     @Test
     void semDadosNaoQuebra() {
         ActivityReport.Result resultado = ActivityReport.build(List.of(), settings(5), S1);
@@ -230,21 +151,16 @@ class ActivityReportTest {
     // Auxiliares
     // ------------------------------------------------------------------
 
-    private static SetRecord serie(String treino, LocalDate data, String musculo, String tipo, Double carga, Integer reps) {
-        return serie(treino, data, musculo, tipo, carga, reps, 60);
+    private static SetRecord serie(String treino, LocalDate data, String tipo, Integer duracao) {
+        return new SetRecord(treino, data, Weeks.startOf(data), "TREINO", duracao, "Exercício", "ex-chest",
+                "chest", List.of(), tipo, !tipo.equals("warmup"), 60.0, 8, null);
     }
 
-    private static SetRecord serie(String treino, LocalDate data, String musculo, String tipo, Double carga,
-                                   Integer reps, Integer duracao) {
-        return new SetRecord(treino, data, Weeks.startOf(data), "TREINO", duracao, "Exercício", "ex-" + musculo,
-                musculo, List.of(), tipo, !tipo.equals("warmup"), carga, reps, null);
-    }
-
-    /** Um treino com {@code series} séries de trabalho de peito. */
+    /** Um treino com {@code series} séries de trabalho. */
     private static List<SetRecord> treinoComSeries(String treino, LocalDate data, int series) {
         List<SetRecord> lista = new ArrayList<>();
         for (int i = 0; i < series; i++) {
-            lista.add(serie(treino, data, "chest", "normal", 60.0, 8));
+            lista.add(serie(treino, data, "normal", 60));
         }
         return lista;
     }
@@ -253,7 +169,7 @@ class ActivityReportTest {
     private static List<SetRecord> treinosNaSemana(String prefixo, LocalDate semana, int quantos) {
         List<SetRecord> lista = new ArrayList<>();
         for (int i = 0; i < quantos; i++) {
-            lista.add(serie(prefixo + i, semana.plusDays(i), "chest", "normal", 60.0, 8));
+            lista.add(serie(prefixo + i, semana.plusDays(i), "normal", 60));
         }
         return lista;
     }

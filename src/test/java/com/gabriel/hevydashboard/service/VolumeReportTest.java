@@ -17,22 +17,25 @@ class VolumeReportTest {
     private static final LocalDate SEMANA_2 = LocalDate.of(2026, 10, 19);
     private static final LocalDate SEMANA_3 = LocalDate.of(2026, 10, 26);
 
-    private static final Settings SETTINGS = new Settings(
-            VolumeRules.DEFAULT,
-            Map.of("chest", new TargetRange(1, 9), "biceps", new TargetRange(10, 20)),
-            new VolumeLevels(List.of(
-                    new VolumeLevel("baixo", new TargetRange(1, 9)),
-                    new VolumeLevel("moderado", new TargetRange(10, 20)),
-                    new VolumeLevel("alto", new TargetRange(21, TargetRange.NO_LIMIT)))),
-            3,
-            5);
+    /** Hoje é sexta da semana 3: as semanas 1 e 2 estão encerradas e a 3 está em andamento. */
+    private static final LocalDate HOJE = LocalDate.of(2026, 10, 30);
+
+    /** O planejado das rotinas: 5 séries diretas de peito e 10 de bíceps por semana. */
+    private static final Map<String, MuscleVolume> PLANEJADO = Map.of(
+            "chest", new MuscleVolume(5, 0),
+            "biceps", new MuscleVolume(10, 18));
+
+    private static final Settings SETTINGS = Settings.defaults();
+
+    // ------------------------------------------------------------------
+    // Contagem
+    // ------------------------------------------------------------------
 
     @Test
     void contaDiretasEIndiretasDeSeriesDeTrabalhoPorMusculoESemana() {
-        List<SetRecord> series = new ArrayList<>();
-        series.addAll(supino(SEMANA_1, "warmup", "normal", "normal", "failure"));
+        List<SetRecord> series = supino(SEMANA_1, "warmup", "normal", "normal", "failure");
 
-        List<VolumeReport.MuscleWeek> relatorio = VolumeReport.weekly(series, SETTINGS);
+        List<VolumeReport.MuscleWeek> relatorio = VolumeReport.weekly(series, SETTINGS, Map.of(), HOJE);
 
         assertEquals(3, resultado(relatorio, SEMANA_1, "chest").direct());
         assertEquals(0, resultado(relatorio, SEMANA_1, "chest").indirect());
@@ -43,42 +46,104 @@ class VolumeReportTest {
     }
 
     @Test
-    void naoTemBuracosEntreSemanasENemMusculosComFaixaSemSerie() {
+    void semSeriesDeTrabalhoNaoTemRelatorio() {
+        assertTrue(VolumeReport.weekly(supino(SEMANA_1, "warmup", "warmup"), SETTINGS, PLANEJADO, HOJE).isEmpty());
+        assertTrue(VolumeReport.weekly(List.of(), SETTINGS, PLANEJADO, HOJE).isEmpty());
+    }
+
+    @Test
+    void naoTemBuracosAteASemanaDeHojeEOsMusculosPlanejadosAparecemComZero() {
         List<SetRecord> series = new ArrayList<>();
         series.addAll(supino(SEMANA_1, "normal"));
-        series.addAll(supino(SEMANA_3, "normal"));
 
-        List<VolumeReport.MuscleWeek> relatorio = VolumeReport.weekly(series, SETTINGS);
+        List<VolumeReport.MuscleWeek> relatorio = VolumeReport.weekly(series, SETTINGS, PLANEJADO, HOJE);
 
-        // 3 semanas (a do meio sem treino) x 3 músculos (chest, biceps e triceps, que aparece como indireta).
+        // 3 semanas (a 2 sem treino e a 3, de hoje, sem treino ainda) x 3 músculos (peito, bíceps e tríceps indireto).
         assertEquals(9, relatorio.size());
         assertEquals(0, resultado(relatorio, SEMANA_2, "chest").direct());
-        assertEquals(0, resultado(relatorio, SEMANA_1, "biceps").direct());
+        assertEquals(0, resultado(relatorio, SEMANA_3, "biceps").direct());
+    }
+
+    // ------------------------------------------------------------------
+    // Planejado das rotinas: abaixo, dentro, acima, e "faltam" na semana em andamento
+    // ------------------------------------------------------------------
+
+    @Test
+    void semanaEncerradaComparaComOPlanejadoEmAbaixoDentroEAcima() {
+        List<SetRecord> series = new ArrayList<>();
+        series.addAll(supino(SEMANA_1, "normal", "normal", "normal", "normal"));                       // 4 de 5
+        series.addAll(supino(SEMANA_2, "normal", "normal", "normal", "normal", "normal"));             // 5 de 5
+        series.addAll(supino(SEMANA_3, "normal", "normal", "normal", "normal", "normal", "normal"));               // 6 de 5
+
+        List<VolumeReport.MuscleWeek> relatorio = VolumeReport.weekly(series, SETTINGS, PLANEJADO, SEMANA_3.plusWeeks(1));
+
+        assertEquals(PlanStatus.BELOW, resultado(relatorio, SEMANA_1, "chest").status());
+        assertEquals(PlanStatus.WITHIN, resultado(relatorio, SEMANA_2, "chest").status());
+        assertEquals(PlanStatus.ABOVE, resultado(relatorio, SEMANA_3, "chest").status());
+        assertEquals(5, resultado(relatorio, SEMANA_1, "chest").planned());
     }
 
     @Test
-    void classificaONivelEAPosicaoNaFaixaAlvo() {
-        List<SetRecord> series = supino(SEMANA_1, "normal", "normal", "normal", "normal", "normal");
+    void naSemanaEmAndamentoMenosQueOPlanejadoEhFaltamEPassarDoPlanejadoEhAcima() {
+        List<SetRecord> faltando = supino(SEMANA_3, "normal", "normal", "normal"); // 3 de 5, ainda é sexta
+        List<SetRecord> completo = supino(SEMANA_3, "normal", "normal", "normal", "normal", "normal");
+        List<SetRecord> passou = supino(SEMANA_3, "normal", "normal", "normal", "normal", "normal", "normal");
 
-        List<VolumeReport.MuscleWeek> relatorio = VolumeReport.weekly(series, SETTINGS);
-
-        VolumeReport.MuscleWeek peito = resultado(relatorio, SEMANA_1, "chest");
-        assertEquals("baixo", peito.level());
-        assertEquals(TargetRange.Status.WITHIN, peito.status()); // 5 séries, faixa 1-9
-
-        VolumeReport.MuscleWeek biceps = resultado(relatorio, SEMANA_1, "biceps");
-        assertEquals(VolumeLevels.NONE, biceps.level());
-        assertEquals(TargetRange.Status.BELOW, biceps.status()); // 0 séries, faixa 10-20
-
-        // Tríceps não tem faixa-alvo, então não tem posição.
-        assertNull(resultado(relatorio, SEMANA_1, "triceps").status());
+        assertEquals(PlanStatus.REMAINING, resultado(VolumeReport.weekly(faltando, SETTINGS, PLANEJADO, HOJE), SEMANA_3, "chest").status());
+        assertEquals(PlanStatus.WITHIN, resultado(VolumeReport.weekly(completo, SETTINGS, PLANEJADO, HOJE), SEMANA_3, "chest").status());
+        assertEquals(PlanStatus.ABOVE, resultado(VolumeReport.weekly(passou, SETTINGS, PLANEJADO, HOJE), SEMANA_3, "chest").status());
     }
 
     @Test
-    void textoNoFormatoDeExibicao() {
-        VolumeReport.MuscleWeek semana = new VolumeReport.MuscleWeek(SEMANA_1, "biceps", 11, 10, 3, "moderado", null);
+    void musculoPlanejadoQueAindaNaoTeveSerieNaSemanaEmAndamentoFalta() {
+        List<SetRecord> series = supino(SEMANA_2, "normal"); // treinou antes, mas nada ainda na semana de hoje
 
-        assertEquals("Bíceps: 11 diretas (indiretas 10)", semana.text());
+        List<VolumeReport.MuscleWeek> relatorio = VolumeReport.weekly(series, SETTINGS, PLANEJADO, HOJE);
+
+        VolumeReport.MuscleWeek biceps = resultado(relatorio, SEMANA_3, "biceps");
+        assertEquals(0, biceps.direct());
+        assertEquals(PlanStatus.REMAINING, biceps.status());
+        assertEquals(PlanStatus.BELOW, resultado(relatorio, SEMANA_2, "biceps").status());
+    }
+
+    @Test
+    void musculoForaDasRotinasNaoTemPlanejadoNemSituacao() {
+        List<SetRecord> series = supino(SEMANA_1, "normal", "normal");
+
+        VolumeReport.MuscleWeek triceps = resultado(VolumeReport.weekly(series, SETTINGS, PLANEJADO, HOJE), SEMANA_1, "triceps");
+
+        assertNull(triceps.planned());
+        assertNull(triceps.status());
+    }
+
+    @Test
+    void planejadoZeroEquivaleASemPlanejado() {
+        List<SetRecord> series = supino(SEMANA_1, "normal");
+        Map<String, MuscleVolume> planejado = Map.of("chest", new MuscleVolume(0, 0));
+
+        VolumeReport.MuscleWeek peito = resultado(VolumeReport.weekly(series, SETTINGS, planejado, HOJE), SEMANA_1, "chest");
+
+        assertNull(peito.planned());
+        assertNull(peito.status());
+    }
+
+    // ------------------------------------------------------------------
+    // Variação por músculo e frequência
+    // ------------------------------------------------------------------
+
+    @Test
+    void variacaoDasSeriesDiretasDeCadaMusculoContraASemanaAnterior() {
+        List<SetRecord> series = new ArrayList<>();
+        series.addAll(supino(SEMANA_1, "normal", "normal", "normal", "normal"));               // 4
+        series.addAll(supino(SEMANA_2, "normal", "normal", "normal", "normal", "normal", "normal")); // 6: +50%
+
+        List<VolumeReport.MuscleWeek> relatorio = VolumeReport.weekly(series, SETTINGS, PLANEJADO, HOJE);
+
+        assertNull(resultado(relatorio, SEMANA_1, "chest").directChangePercent());              // primeira semana
+        assertEquals(50.0, resultado(relatorio, SEMANA_2, "chest").directChangePercent(), 1e-9);
+        assertEquals(-100.0, resultado(relatorio, SEMANA_3, "chest").directChangePercent(), 1e-9);
+        // Bíceps começou em zero: não dá para calcular percentual sobre zero.
+        assertNull(resultado(relatorio, SEMANA_2, "biceps").directChangePercent());
     }
 
     @Test
@@ -90,7 +155,7 @@ class VolumeReportTest {
         series.add(new SetRecord("w-3", SEMANA_1.plusDays(4), SEMANA_1, "PULL", 60, "Rosca", "rosca", "biceps",
                 List.of(), "normal", true, 20.0, 10, null));                       // bíceps direto
 
-        List<VolumeReport.MuscleWeek> relatorio = VolumeReport.weekly(series, SETTINGS);
+        List<VolumeReport.MuscleWeek> relatorio = VolumeReport.weekly(series, SETTINGS, PLANEJADO, HOJE);
 
         assertEquals(2, resultado(relatorio, SEMANA_1, "chest").sessions());
         assertEquals(1, resultado(relatorio, SEMANA_1, "biceps").sessions());
@@ -98,10 +163,15 @@ class VolumeReportTest {
         assertEquals(0, resultado(relatorio, SEMANA_1, "triceps").sessions());
     }
 
+    // ------------------------------------------------------------------
+    // Texto e nomes
+    // ------------------------------------------------------------------
+
     @Test
-    void semSeriesDeTrabalhoNaoTemRelatorio() {
-        assertTrue(VolumeReport.weekly(supino(SEMANA_1, "warmup", "warmup"), SETTINGS).isEmpty());
-        assertTrue(VolumeReport.weekly(List.of(), SETTINGS).isEmpty());
+    void textoNoFormatoDeExibicao() {
+        VolumeReport.MuscleWeek semana = new VolumeReport.MuscleWeek(SEMANA_1, "biceps", 11, 10, 3, 10, PlanStatus.ABOVE, null);
+
+        assertEquals("Bíceps: 11 diretas (indiretas 10)", semana.text());
     }
 
     @Test

@@ -22,20 +22,10 @@ public record DashboardData(
         List<Week> weeks,
         List<VolumeRow> volume,
         Map<String, Planned> plannedVolume,
-        List<Day> calendar,
         List<ExerciseData> exercises,
-        List<PrEvent> prEvents,
-        List<WorkoutData> workouts,
-        List<PhaseData> phases) {
+        List<PrEvent> prEvents) {
 
-    /** @param max null quando não há teto */
-    public record Range(int min, Integer max) {
-    }
-
-    public record Level(String name, int min, Integer max) {
-    }
-
-    public record Config(int workoutsPerWeek, int stagnationWeeks, Map<String, Range> targets, List<Level> levels) {
+    public record Config(int workoutsPerWeek, int stagnationWeeks) {
     }
 
     public record Consistency(int workoutsPerWeek, int currentStreakWeeks, int bestStreakWeeks) {
@@ -47,39 +37,46 @@ public record DashboardData(
             boolean complete,
             int workouts,
             int sets,
-            double tonnageKg,
             Double averageDurationMinutes,
-            int repsLow,
-            int repsMid,
-            int repsHigh,
-            int push,
-            int pull,
-            int legs,
-            int core,
             Double changePercent) {
     }
 
-    /** @param status "below", "within" ou "above" em relação à faixa-alvo; omitido se o músculo não tem faixa */
+    /**
+     * @param planned       séries diretas planejadas nas rotinas; omitido se o músculo não está nas rotinas
+     * @param status        "below", "within", "above" ou "remaining" (semana em andamento, ainda falta); omitido sem planejado
+     * @param changePercent variação das séries diretas em relação à semana anterior; omitido se a anterior teve zero
+     */
     public record VolumeRow(LocalDate week, String muscle, int direct, int indirect, int sessions,
-                            String level, String status) {
+                            Integer planned, String status, Double changePercent) {
     }
 
+    /** O volume planejado das rotinas atuais para um grupo muscular. */
     public record Planned(int direct, int indirect) {
     }
 
-    public record Day(LocalDate date, int workouts, int sets) {
+    /** A série mais pesada de um dia de treino. */
+    public record Point(LocalDate date, double weightKg, int reps) {
     }
 
     public record Mark(double value, LocalDate date) {
     }
 
-    public record Session(LocalDate date, double weightKg, double oneRepMax) {
+    /** @param type "load_up", "load_down", "reps_up", "reps_down" ou "same" */
+    public record Change(String type, Point previous, Point current) {
+    }
+
+    /**
+     * @param progress "progressing", "stagnant", "inactive" ou "no_baseline"
+     * @param recent   a melhor série das últimas semanas; omitido se não treinou
+     * @param previous a melhor série das semanas anteriores; omitido se não treinou
+     */
+    public record Trend(String progress, Point recent, Point previous) {
     }
 
     /**
      * @param muscleGroup o grupo do músculo primário, já com dorsal e costas superiores juntos ("back")
      * @param inRoutine   definido pelas rotinas atuais; o site mostra só esses exercícios por padrão
-     * @param progress    "progressing", "stagnant", "inactive" ou "no_baseline"
+     * @param lastChange  o último treino contra o anterior; omitido se só teve um treino
      */
     public record ExerciseData(
             String id,
@@ -87,22 +84,14 @@ public record DashboardData(
             String muscleGroup,
             boolean inRoutine,
             LocalDate lastTrained,
-            String progress,
-            Double recentBest,
-            Double previousBest,
             Mark maxWeightKg,
             Mark maxReps,
-            Mark bestOneRepMax,
-            List<Session> sessions) {
+            Change lastChange,
+            Trend trend,
+            List<Point> sessions) {
     }
 
-    /** @param type "weight", "reps" ou "one_rep_max" */
+    /** @param type "weight" ou "reps" */
     public record PrEvent(LocalDate date, String exercise, String type, double value) {
-    }
-
-    public record WorkoutData(String id, LocalDate date, String title, Integer durationMinutes, int sets, double tonnageKg) {
-    }
-
-    public record PhaseData(String name, LocalDate start, LocalDate end) {
     }
 }

@@ -14,54 +14,9 @@ export function alpha(hex, opacity) {
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
-// ---------- plugins ----------
+// ---------- plugin ----------
 
-/** Linha vertical com o nome da fase (cutting, bulking) no começo dela. */
-const phaseMarkers = {
-  id: 'phaseMarkers',
-  afterDatasetsDraw(chart, args, opts) {
-    if (!opts?.phases?.length) return;
-    const { ctx, chartArea, scales } = chart;
-    const labels = chart.data.labels;
-    const step = (chartArea.right - chartArea.left) / labels.length;
-    ctx.save();
-    ctx.font = `600 11px ${getComputedStyle(document.body).fontFamily}`;
-    for (const phase of opts.phases) {
-      if (phase.start < labels[0]) continue; // a fase começou antes do período mostrado
-      let index = -1;
-      labels.forEach((week, i) => { if (week <= phase.start) index = i; });
-      if (index < 0) continue;
-      const x = scales.x.getPixelForValue(index) - step / 2;
-      ctx.strokeStyle = color('--axis');
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x, chartArea.top);
-      ctx.lineTo(x, chartArea.bottom);
-      ctx.stroke();
-      ctx.fillStyle = color('--ink-2');
-      ctx.textBaseline = 'top';
-      ctx.fillText(phase.name, x + 5, chartArea.top + 2);
-    }
-    ctx.restore();
-  },
-};
-
-/** Faixa horizontal translúcida (a faixa-alvo de séries). */
-const targetBand = {
-  id: 'targetBand',
-  beforeDatasetsDraw(chart, args, opts) {
-    if (!opts?.min && opts?.min !== 0) return;
-    const { ctx, chartArea, scales } = chart;
-    const top = scales.y.getPixelForValue(Math.min(opts.max ?? scales.y.max, scales.y.max));
-    const bottom = scales.y.getPixelForValue(Math.max(opts.min, scales.y.min));
-    ctx.save();
-    ctx.fillStyle = color('--band');
-    ctx.fillRect(chartArea.left, top, chartArea.right - chartArea.left, bottom - top);
-    ctx.restore();
-  },
-};
-
-/** Linhas de referência (meta de treinos, zero): sólidas e finas, com o rótulo na ponta direita. */
+/** Linhas de referência (o planejado, zero): sólidas e finas, com o rótulo na ponta direita. */
 const refLines = {
   id: 'refLines',
   afterDatasetsDraw(chart, args, opts) {
@@ -89,29 +44,6 @@ const refLines = {
   },
 };
 
-/** Nome da série ao lado do último ponto da linha (rotulagem direta). */
-const endLabels = {
-  id: 'endLabels',
-  afterDatasetsDraw(chart) {
-    const { ctx } = chart;
-    ctx.save();
-    ctx.font = `600 11px ${getComputedStyle(document.body).fontFamily}`;
-    ctx.fillStyle = color('--ink-2');
-    ctx.textBaseline = 'middle';
-    chart.data.datasets.forEach((dataset, i) => {
-      if (!dataset.endLabel) return;
-      const meta = chart.getDatasetMeta(i);
-      for (let p = dataset.data.length - 1; p >= 0; p--) {
-        if (dataset.data[p] == null) continue;
-        const point = meta.data[p];
-        ctx.fillText(dataset.endLabel, point.x + 8, point.y);
-        break;
-      }
-    });
-    ctx.restore();
-  },
-};
-
 // ---------- opções base ----------
 
 function deepMerge(target, source) {
@@ -125,7 +57,7 @@ function deepMerge(target, source) {
   return target;
 }
 
-function baseOptions(isCategoryTime) {
+function baseOptions() {
   const font = { family: getComputedStyle(document.body).fontFamily, size: 11 };
   return {
     responsive: true,
@@ -163,10 +95,10 @@ function baseOptions(isCategoryTime) {
           color: color('--muted'),
           font,
           maxRotation: 0,
-          autoSkip: !isCategoryTime,
+          autoSkip: false,
+          // Os rótulos são as segundas-feiras (texto ISO); no eixo aparece só o mês, na primeira semana dele.
           callback(value, index) {
-            const labels = this.chart.data.labels;
-            return isCategoryTime ? monthTick(labels, index) : labels[index];
+            return monthTick(this.chart.data.labels, index);
           },
         },
       },
@@ -181,30 +113,26 @@ function baseOptions(isCategoryTime) {
 }
 
 /**
- * Cria um gráfico dentro de `view` (que já precisa estar no documento).
+ * Cria um gráfico de semanas dentro de `view` (que já precisa estar no documento).
  *
- * @param weeksAxis true quando o eixo x é de semanas (rótulos ISO, mostrados como mês)
- * @param pluginOptions opções dos plugins: phases, band, lines
+ * @param plugins.lines linhas de referência: [{ y, label, strong, left }]
  */
-export function mountChart(view, ctx, { type, labels, datasets, options = {}, plugins = {}, height = '', weeksAxis = true, label }) {
+export function mountChart(view, ctx, { type, labels, datasets, options = {}, plugins = {}, height = '', label }) {
   const canvas = el('canvas', { role: 'img', 'aria-label': label || 'Gráfico' });
   view.append(el('div', { class: `chart-box ${height}` }, canvas));
 
   const config = {
     type,
     data: { labels, datasets },
-    options: deepMerge(baseOptions(weeksAxis), {
+    options: deepMerge(baseOptions(), {
       ...options,
       plugins: {
         ...(options.plugins || {}),
-        phaseMarkers: { phases: plugins.phases || [] },
-        targetBand: plugins.band || {},
         refLines: { lines: plugins.lines || [] },
       },
     }),
-    plugins: [phaseMarkers, targetBand, refLines, endLabels],
+    plugins: [refLines],
   };
-  // deepMerge copiou as opções; garante que o tooltip não perca os callbacks padrão ao receber os do chamador.
   return ctx.register(new Chart(canvas, config));
 }
 

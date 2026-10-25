@@ -19,13 +19,15 @@ class DashboardExporterTest {
     private static final LocalDate HOJE = LocalDate.of(2026, 10, 24);
     private static final Instant GERADO_EM = Instant.parse("2026-10-24T12:00:00Z");
 
+    private static String texto;
     private static JsonNode json;
     private static DashboardData dados;
 
     @BeforeAll
     static void geraOExemplo() throws Exception {
         dados = SampleData.dashboard(HOJE, GERADO_EM);
-        json = new ObjectMapper().readTree(DashboardExporter.toJson(dados));
+        texto = DashboardExporter.toJson(dados);
+        json = new ObjectMapper().readTree(texto);
     }
 
     @Test
@@ -36,24 +38,32 @@ class DashboardExporterTest {
     }
 
     @Test
-    void trazTodasAsSecoesQueOSiteLe() {
+    void trazAsSecoesQueOSiteLeESoElas() {
         for (String secao : new String[]{"config", "muscleLabels", "consistency", "averageDurationMinutes", "weeks",
-                "volume", "plannedVolume", "calendar", "exercises", "prEvents", "workouts", "phases"}) {
+                "volume", "plannedVolume", "exercises", "prEvents"}) {
             assertTrue(json.has(secao), "falta a seção " + secao);
+        }
+        // O que saiu do programa não pode voltar para o arquivo.
+        for (String removida : new String[]{"phases", "calendar", "workouts"}) {
+            assertFalse(json.has(removida), "a seção " + removida + " não existe mais");
         }
     }
 
     @Test
-    void configuracaoLevaFaixasENiveisComTetoOmitidoQuandoNaoHaLimite() {
+    void naoTemMaisOneRmNemFasesNemFaixasFixas() {
+        for (String palavra : new String[]{"oneRepMax", "one_rep_max", "bestOneRepMax", "cutting", "bulking",
+                "targets", "levels", "tonnage"}) {
+            assertFalse(texto.contains(palavra), "o arquivo não deveria mais conter \"" + palavra + "\"");
+        }
+    }
+
+    @Test
+    void configuracaoTemSoAsMetasDeTreinoEDeEstagnacao() {
         JsonNode config = json.get("config");
 
         assertEquals(5, config.get("workoutsPerWeek").asInt());
-        assertEquals(1, config.get("targets").get("chest").get("min").asInt());
-        assertEquals(9, config.get("targets").get("chest").get("max").asInt());
-        JsonNode alto = config.get("levels").get(2);
-        assertEquals("alto", alto.get("name").asText());
-        assertEquals(21, alto.get("min").asInt());
-        assertFalse(alto.has("max"), "nível sem teto não deve ter o campo max");
+        assertEquals(3, config.get("stagnationWeeks").asInt());
+        assertEquals(2, config.size());
     }
 
     @Test
@@ -68,24 +78,63 @@ class DashboardExporterTest {
                 assertEquals(anterior.plusWeeks(1), atual);
             }
             anterior = atual;
-            double tonelagem = semana.get("tonnageKg").asDouble();
-            assertEquals(Math.round(tonelagem * 10) / 10.0, tonelagem, 1e-9);
+            if (semana.has("averageDurationMinutes")) {
+                double minutos = semana.get("averageDurationMinutes").asDouble();
+                assertEquals(Math.round(minutos * 10) / 10.0, minutos, 1e-9);
+            }
         }
         assertTrue(semanas.get(semanas.size() - 1).get("inProgress").asBoolean());
     }
 
     @Test
-    void volumeTemStatusEmMinusculasENivelEmPortugues() {
-        assertTrue(json.get("volume").size() > 60 * 5);
+    void volumeTrazOPlanejadoEASituacaoDeCadaMusculo() {
+        int comPlanejado = 0;
         for (JsonNode linha : json.get("volume")) {
-            // Com as faixas padrão, todo músculo do exemplo tem faixa-alvo.
-            assertTrue(linha.get("status").asText().matches("below|within|above"), linha.toString());
-            assertTrue(linha.get("level").asText().matches("nenhum|baixo|moderado|alto"), linha.toString());
+            if (linha.has("planned")) {
+                comPlanejado++;
+                assertTrue(linha.get("status").asText().matches("below|within|above|remaining"), linha.toString());
+                assertTrue(linha.get("planned").asInt() > 0);
+            } else {
+                assertFalse(linha.has("status"), "sem planejado não há situação: " + linha);
+            }
+        }
+        assertTrue(comPlanejado > 60 * 5, "os músculos das rotinas têm planejado em todas as semanas");
+    }
+
+    @Test
+    void faltamSoExisteNaSemanaEmAndamentoEAbaixoSoNasEncerradas() {
+        String semanaDeHoje = json.get("weeks").get(json.get("weeks").size() - 1).get("week").asText();
+
+        for (JsonNode linha : json.get("volume")) {
+            if (!linha.has("status")) {
+                continue;
+            }
+            String situacao = linha.get("status").asText();
+            if (linha.get("week").asText().equals(semanaDeHoje)) {
+                assertFalse(situacao.equals("below"), "na semana em andamento falta, não é abaixo: " + linha);
+            } else {
+                assertFalse(situacao.equals("remaining"), "semana encerrada não tem 'remaining': " + linha);
+            }
         }
     }
 
     @Test
-    void exerciciosTrazemRecordesSessoesETendenciaEMarcamOsDasRotinas() {
+    void volumePlanejadoDasRotinasBateComAContaFeitaAMao() {
+        JsonNode planejado = json.get("plannedVolume");
+
+        // Mesmos números da conta feita à mão em VolumeCalculatorTest.
+        assertEquals(9, planejado.get("chest").get("direct").asInt());
+        assertEquals(20, planejado.get("shoulders").get("direct").asInt());
+        assertEquals(6, planejado.get("triceps").get("direct").asInt());
+        assertEquals(15, planejado.get("triceps").get("indirect").asInt());
+        assertEquals(18, planejado.get("back").get("direct").asInt());
+        assertEquals(6, planejado.get("biceps").get("direct").asInt());
+        assertEquals(18, planejado.get("biceps").get("indirect").asInt());
+        assertFalse(planejado.has("lats"), "dorsal e costas superiores contam juntos como back");
+    }
+
+    @Test
+    void exerciciosTrazemRecordesTreinosETendenciaSemOneRm() {
         JsonNode supino = null;
         for (JsonNode exercicio : json.get("exercises")) {
             if (exercicio.get("name").asText().equals("Supino Reto (Barra)")) {
@@ -94,31 +143,24 @@ class DashboardExporterTest {
         }
         assertNotNull(supino);
         assertTrue(supino.get("inRoutine").asBoolean());
-        assertTrue(supino.get("progress").asText().matches("progressing|stagnant|inactive|no_baseline"));
+        assertTrue(supino.get("trend").get("progress").asText().matches("progressing|stagnant|inactive|no_baseline"));
         assertTrue(supino.get("sessions").size() > 20);
+        JsonNode ultimoTreino = supino.get("sessions").get(supino.get("sessions").size() - 1);
+        assertTrue(ultimoTreino.get("weightKg").asDouble() >= 60.0);
+        assertTrue(ultimoTreino.get("reps").asInt() > 0);
         assertTrue(supino.get("maxWeightKg").get("value").asDouble() >= 60.0);
-        assertNotNull(supino.get("maxWeightKg").get("date"));
+        assertNotNull(supino.get("maxReps").get("date"));
+        assertTrue(supino.get("lastChange").get("type").asText().matches("load_up|load_down|reps_up|reps_down|same"));
+        assertNotNull(supino.get("lastChange").get("previous").get("weightKg"));
+        assertNotNull(supino.get("lastChange").get("current").get("reps"));
     }
 
     @Test
-    void volumePlanejadoDasRotinasVemPorGrupoMuscular() {
-        JsonNode planejado = json.get("plannedVolume");
-
-        assertTrue(planejado.has("chest"));
-        assertTrue(planejado.get("chest").get("direct").asInt() > 0);
-        // Tríceps recebe indireta dos empurrões; costas só aparece como grupo (lats e upper_back juntos).
-        assertTrue(planejado.get("triceps").get("indirect").asInt() > 0);
-        assertTrue(planejado.has("back"));
-        assertFalse(planejado.has("lats"));
-    }
-
-    @Test
-    void fasesVoltamOrdenadasEAUltimaEstaEmAndamento() {
-        JsonNode fases = json.get("phases");
-
-        assertEquals("bulking", fases.get(0).get("name").asText());
-        assertEquals("cutting", fases.get(1).get("name").asText());
-        assertFalse(fases.get(1).has("end"));
+    void recordesSaoSoDeCargaEDeRepeticoes() {
+        assertTrue(json.get("prEvents").size() > 20);
+        for (JsonNode evento : json.get("prEvents")) {
+            assertTrue(evento.get("type").asText().matches("weight|reps"), evento.toString());
+        }
     }
 
     @Test
@@ -129,16 +171,12 @@ class DashboardExporterTest {
 
     @Test
     void mesmaDataGeraExatamenteOMesmoArquivo() {
-        String primeiro = DashboardExporter.toJson(SampleData.dashboard(HOJE, GERADO_EM));
-        String segundo = DashboardExporter.toJson(SampleData.dashboard(HOJE, GERADO_EM));
-
-        assertEquals(primeiro, segundo);
+        assertEquals(texto, DashboardExporter.toJson(SampleData.dashboard(HOJE, GERADO_EM)));
     }
 
     @Test
-    void osDefaultsDeSettingsSaoOsMesmosQueUmaPlanilhaNovaRecebe() {
-        // A planilha nova é preenchida a partir de Settings.defaults(); o exemplo usa os mesmos valores.
+    void osPadroesDeSettingsSaoOsUsadosNoExemplo() {
         assertEquals(Settings.defaults().workoutsPerWeek(), dados.config().workoutsPerWeek());
-        assertEquals(Settings.defaults().targets().size(), dados.config().targets().size());
+        assertEquals(Settings.defaults().stagnationWeeks(), dados.config().stagnationWeeks());
     }
 }

@@ -20,21 +20,12 @@
   --s4: #eda100;   /* série 4: amarelo */
   --neutral-mark: #c3c2b7;  /* marca de contexto (emphasis) */
 
-  --band: rgba(42, 120, 214, 0.14);   /* faixa-alvo */
   --good: #006300;
   --warn: #8a5a00;
   --diverge-pos: #2a78d6;
   --diverge-neg: #e34948;
 
-  --heat-0: #efeeea;
-  --heat-1: #b7d3f6;
-  --heat-2: #6da7ec;
-  --heat-3: #2a78d6;
-  --heat-4: #184f95;
 
-  --ord-1: #86b6ef;   /* ordinal: 1-5, 6-12, 13+ repetições */
-  --ord-2: #2a78d6;
-  --ord-3: #184f95;
 
   --focus: #2a78d6;
   --font: system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -57,19 +48,10 @@
     --s3: #199e70;
     --s4: #c98500;
     --neutral-mark: #4a4a46;
-    --band: rgba(57, 135, 229, 0.30);
     --good: #0ca30c;
     --warn: #fab219;
     --diverge-pos: #3987e5;
     --diverge-neg: #e66767;
-    --heat-0: #232321;
-    --heat-1: #174a85;
-    --heat-2: #2468b8;
-    --heat-3: #3987e5;
-    --heat-4: #86b6ef;
-    --ord-1: #184f95;
-    --ord-2: #3987e5;
-    --ord-3: #9ec5f4;
     --focus: #6da7ec;
   }
 }
@@ -90,19 +72,10 @@
   --s3: #199e70;
   --s4: #c98500;
   --neutral-mark: #4a4a46;
-  --band: rgba(57, 135, 229, 0.30);
   --good: #0ca30c;
   --warn: #fab219;
   --diverge-pos: #3987e5;
   --diverge-neg: #e66767;
-  --heat-0: #232321;
-  --heat-1: #174a85;
-  --heat-2: #2468b8;
-  --heat-3: #3987e5;
-  --heat-4: #86b6ef;
-  --ord-1: #184f95;
-  --ord-2: #3987e5;
-  --ord-3: #9ec5f4;
   --focus: #6da7ec;
 }
 
@@ -156,10 +129,10 @@ button, select { font: inherit; color: inherit; }
 .tab:hover { color: var(--ink); }
 .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--s1); }
 
-.filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: end; margin-bottom: 16px; }
+.filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: end; }
 .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .field label { font-size: 12px; color: var(--muted); }
-.field select {
+.field select, .field input {
   min-width: 150px; max-width: 100%; padding: 7px 10px; border-radius: 8px;
   border: 1px solid var(--axis); background: var(--surface); cursor: pointer;
 }
@@ -200,7 +173,8 @@ button, select { font: inherit; color: inherit; }
 .key { display: inline-block; flex: none; }
 .key.line { width: 14px; height: 2px; border-radius: 1px; }
 .key.box { width: 10px; height: 10px; border-radius: 2px; }
-.key.tick { width: 2px; height: 12px; background: var(--ink); }
+.key.tick-plan { width: 3px; height: 14px; border-radius: 1px; background: var(--ink); }
+.key.tick-prev { width: 2px; height: 10px; border-radius: 1px; background: var(--muted); }
 
 /* tabela (versão acessível do gráfico) */
 .table-wrap { overflow-x: auto; max-height: 340px; overflow-y: auto; }
@@ -231,15 +205,15 @@ table.data tr.clickable { cursor: pointer; }
 
 .rows { display: flex; flex-direction: column; gap: 4px; }
 .vrow {
-  display: grid; grid-template-columns: 112px minmax(0, 1fr) 200px; gap: 12px; align-items: center;
+  display: grid; grid-template-columns: 112px minmax(0, 1fr) 270px; gap: 12px; align-items: center;
   padding: 3px 6px; border-radius: 8px;
 }
 .vrow:hover, .vrow:focus-visible { background: var(--surface-2); }
 .vrow .name { font-size: 13px; }
 .track { position: relative; height: 22px; }
-.track .band { position: absolute; top: 3px; bottom: 3px; background: var(--band); border-radius: 3px; }
 .track .bar { position: absolute; left: 0; top: 6px; height: 10px; background: var(--s1); border-radius: 0 4px 4px 0; min-width: 2px; }
-.track .prev { position: absolute; top: 2px; bottom: 2px; width: 2px; background: var(--ink); border-radius: 1px; }
+.track .prev { position: absolute; top: 4px; bottom: 4px; width: 2px; background: var(--muted); border-radius: 1px; }
+.track .planned { position: absolute; top: 1px; bottom: 1px; width: 3px; background: var(--ink); border-radius: 1px; }
 .track .base { position: absolute; left: 0; top: 2px; bottom: 2px; width: 1px; background: var(--axis); }
 .vrow .nums { font-size: 12px; color: var(--ink-2); display: flex; flex-direction: column; line-height: 1.3; }
 .vrow .nums strong { color: var(--ink); font-size: 13px; font-weight: 600; }
@@ -248,23 +222,6 @@ table.data tr.clickable { cursor: pointer; }
 .status.within { color: var(--good); }
 .status.warn { color: var(--warn); }
 @media (max-width: 640px) { .vrow { grid-template-columns: 90px minmax(0, 1fr); } .vrow .nums { grid-column: 1 / -1; flex-direction: row; gap: 10px; } }
-
-/* ---------- calendário de calor ---------- */
-
-.cal { display: grid; grid-template-columns: auto 1fr; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
-.cal-days { display: grid; grid-template-rows: repeat(7, 14px); gap: 3px; margin-top: 18px; font-size: 11px; color: var(--muted); }
-.cal-days span { line-height: 14px; }
-.cal-main { min-width: max-content; }
-.cal-months { position: relative; height: 16px; font-size: 11px; color: var(--muted); }
-.cal-months span { position: absolute; top: 0; }
-.cal-grid { display: grid; grid-template-rows: repeat(7, 14px); grid-auto-flow: column; grid-auto-columns: 14px; gap: 3px; }
-.cell { width: 14px; height: 14px; border-radius: 3px; background: var(--heat-0); }
-.cell.l1 { background: var(--heat-1); } .cell.l2 { background: var(--heat-2); }
-.cell.l3 { background: var(--heat-3); } .cell.l4 { background: var(--heat-4); }
-.cell.future { background: transparent; }
-.cell:hover { outline: 2px solid var(--ink); outline-offset: 0; }
-.scale { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; margin-top: 8px; }
-.scale .cell { width: 12px; height: 12px; }
 
 /* ---------- listas e avisos ---------- */
 
@@ -325,3 +282,18 @@ table.data td, table.data th { padding-left: 8px; padding-right: 8px; }
 /* Etiqueta de origem dos dados no topo: neutra para o exemplo, em destaque para os dados do próprio usuário. */
 .badge.mine { background: var(--s1); border-color: var(--s1); color: #fff; font-weight: 600; }
 .topbar .meta { display: inline-flex; align-items: center; gap: 8px; }
+
+/* ---------- aba Exercícios ---------- */
+
+.cols-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 900px) { .cols-3 { grid-template-columns: minmax(0, 1fr); } }
+.change-col h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.change-col .count {
+  min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border);
+  color: var(--ink-2); font-size: 12px; font-weight: 600; text-align: center;
+}
+.alert-list li { align-items: baseline; }
+.chart-title { margin: 10px 0 2px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.chart-box.short { height: 190px; }
+.muted { color: var(--muted); }
+.field input { width: 110px; }

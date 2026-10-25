@@ -1,13 +1,11 @@
-// Aba "Visão geral": cartões de resumo, volume por músculo da semana, séries e treinos por semana,
-// variação semanal, duração média e calendário de treinos.
+// Aba "Visão geral": os cartões da semana (que não mudam com os filtros), o volume por músculo contra o
+// planejado das rotinas e, abaixo dos filtros, o histórico: séries, treinos, variação e duração.
 import { el, card, legend, attachTip } from './ui.js';
 import { visibleWeeks } from './data.js';
 import { mountChart, color, alpha, columnStyle, weekTitle } from './charts.js';
-import {
-  num, signedPercent, minutes, fmtDate, monthLong, monthShort, weekdayName, addDays, mondayOf,
-} from './format.js';
+import { num, signedPercent, minutes, fmtDate, monthLong } from './format.js';
 
-export function buildOverview(model, state) {
+export function buildOverview(model, state, actions) {
   const d = model.data;
   const weeks = visibleWeeks(model, state);
   const current = model.weeks[model.weeks.length - 1];
@@ -16,16 +14,16 @@ export function buildOverview(model, state) {
   const summary = el('div', { class: 'grid col-12' }, heroCard(d, current), tilesGrid(model, current, previous));
   return [
     summary,
+    actions.filters, // os filtros ficam abaixo dos cartões da semana, que não dependem deles
     volumeCard(model, state, current, previous),
     setsCard(model, state, weeks),
     workoutsCard(model, weeks),
-    changeCard(model, weeks),
+    changeCard(model, state, weeks),
     durationCard(model, weeks),
-    calendarCard(model, state),
   ];
 }
 
-// ---------- números de destaque ----------
+// ---------- números de destaque (não mudam com os filtros) ----------
 
 function heroCard(d, current) {
   const goal = d.config.workoutsPerWeek;
@@ -61,8 +59,8 @@ function tilesGrid(model, current, previous) {
     ? recent.reduce((sum, w) => sum + w.averageDurationMinutes * w.workouts, 0) / recentWorkouts : null;
 
   return el('div', { class: 'grid col-8' },
-    tile('Séries na semana', num(current.sets), '', setsNote, setsNoteClass),
-    tile('Recordes no mês', num(prsThisMonth), '', `${monthLong(d.today)}: carga, repetições ou 1RM`),
+    tile('Séries na semana', num(current.sets), model.plannedTotal > 0 ? `de ${num(model.plannedTotal)} planejadas` : '', setsNote, setsNoteClass),
+    tile('Recordes no mês', num(prsThisMonth), '', `${monthLong(d.today)}: carga ou repetições`),
     tile('Semanas completas seguidas', num(d.consistency.currentStreakWeeks), '', `melhor sequência: ${num(d.consistency.bestStreakWeeks)} · meta: ${d.config.workoutsPerWeek} treinos por semana`),
     tile('Duração média do treino', recentDuration != null ? minutes(recentDuration) : '—', '',
       d.averageDurationMinutes != null ? `últimas 4 semanas · histórico: ${minutes(d.averageDurationMinutes)}` : ''));
@@ -75,103 +73,103 @@ function tile(label, value, unit, note, noteClass = '') {
     note ? el('div', { class: `note ${noteClass}`, text: note }) : null);
 }
 
-// ---------- volume por músculo na semana atual ----------
+// ---------- volume por músculo contra o planejado das rotinas ----------
 
+/** Cada situação tem ícone e texto, porque a cor sozinha não basta. */
 const STATUS = {
-  within: { icon: '✓', text: 'Dentro da faixa', cls: 'within' },
-  below: { icon: '▼', text: 'Abaixo da faixa', cls: '' },
-  above: { icon: '▲', text: 'Acima da faixa', cls: '' },
+  within: { icon: '✓', cls: 'within', text: () => 'Dentro do planejado' },
+  above: { icon: '▲', cls: '', text: (diff) => `Acima do planejado (+${diff})` },
+  below: { icon: '▼', cls: '', text: (diff) => `Abaixo do planejado (−${diff})` },
+  remaining: { icon: '○', cls: '', text: (diff) => (diff === 1 ? 'Falta 1 série' : `Faltam ${diff} séries`) },
 };
 
-function volumeCard(model, state, current, previous) {
-  const d = model.data;
-  const muscles = model.muscles.filter((m) => state.muscle === 'all' || m === state.muscle);
+function statusOf(row) {
+  const status = row.status ? STATUS[row.status] : null;
+  return status ? { ...status, label: status.text(Math.abs(row.direct - row.planned)) } : null;
+}
 
+function volumeCard(model, state, current, previous) {
+  const muscles = model.muscles.filter((m) => state.muscle === 'all' || m === state.muscle);
   const rows = muscles.map((muscle) => ({
     muscle,
     now: model.volumeAt(current.week, muscle),
     before: previous ? model.volumeAt(previous.week, muscle) : null,
-    target: d.config.targets[muscle] || null,
-    planned: d.plannedVolume[muscle] || null,
+    plan: model.data.plannedVolume[muscle] || null,
   }));
-  const scaleMax = Math.max(10, ...rows.map((r) => Math.max(r.now.direct, r.before?.direct || 0, r.target?.max ?? (r.target?.min || 0) * 1.5))) * 1.12;
+  const scaleMax = Math.max(10, ...rows.map((r) => Math.max(r.now.direct, r.before?.direct || 0, r.now.planned || 0))) * 1.12;
 
   return card({
     title: 'Volume por músculo na semana',
-    subtitle: `Séries diretas da semana de ${fmtDate(current.week)}${current.inProgress ? ' (em andamento)' : ''}, comparadas com a faixa-alvo`,
+    subtitle: `Séries diretas da semana de ${fmtDate(current.week)}${current.inProgress ? ' (em andamento)' : ''} contra o volume planejado das suas rotinas`,
     cls: 'col-12',
     body(view) {
       view.append(legend([
         { shape: 'box', color: color('--s1'), label: 'Séries diretas desta semana' },
-        { shape: 'box', color: color('--band'), label: 'Faixa-alvo' },
-        { shape: 'tick', label: 'Semana anterior' },
+        { shape: 'tick-plan', label: 'Planejado nas rotinas' },
+        { shape: 'tick-prev', label: 'Semana anterior' },
       ]));
       const list = el('div', { class: 'rows', role: 'list' });
       for (const r of rows) {
-        const status = r.now.status ? STATUS[r.now.status] : null;
-        const bandStart = r.target ? (r.target.min / scaleMax) * 100 : 0;
-        const bandEnd = r.target ? ((r.target.max ?? scaleMax) / scaleMax) * 100 : 0;
-        const row = el('div', { class: 'vrow', role: 'listitem', tabindex: '0', 'aria-label': describe(model, r) },
+        const status = statusOf(r.now);
+        const planned = r.now.planned;
+        const row = el('div', { class: 'vrow', role: 'listitem', tabindex: '0', 'aria-label': describe(model, r, status) },
           el('span', { class: 'name', text: model.label(r.muscle) }),
           el('div', { class: 'track' },
             el('span', { class: 'base' }),
-            r.target ? el('span', { class: 'band', style: `left:${bandStart}%;width:${Math.min(100, bandEnd) - bandStart}%` }) : null,
             el('span', { class: 'bar', style: `width:${(r.now.direct / scaleMax) * 100}%` }),
-            r.before ? el('span', { class: 'prev', style: `left:calc(${(r.before.direct / scaleMax) * 100}% - 1px)` }) : null),
+            r.before ? el('span', { class: 'prev', style: `left:calc(${(r.before.direct / scaleMax) * 100}% - 1px)` }) : null,
+            planned ? el('span', { class: 'planned', style: `left:calc(${(planned / scaleMax) * 100}% - 1px)` }) : null),
           el('div', { class: 'nums' },
-            el('span', {}, el('strong', { text: `${num(r.now.direct)} diretas` }), ` (indiretas ${num(r.now.indirect)})`),
+            el('span', {}, el('strong', { text: planned ? `${num(r.now.direct)} de ${num(planned)} diretas` : `${num(r.now.direct)} diretas` }),
+              ` (indiretas ${num(r.now.indirect)})`),
             el('span', { class: 'line-2' },
-              status ? el('span', { class: `status ${status.cls}` }, el('span', { 'aria-hidden': 'true', text: status.icon }), status.text) : null,
+              status
+                ? el('span', { class: `status ${status.cls}` }, el('span', { 'aria-hidden': 'true', text: status.icon }), status.label)
+                : el('span', { class: 'muted', text: 'fora das rotinas' }),
               el('span', { text: `${num(r.now.sessions)}× na semana` }))));
-        attachTip(row, () => tipRows(model, r, current));
+        attachTip(row, () => tipRows(model, r, status));
         list.append(row);
       }
       view.append(list);
     },
     table: () => ({
-      headers: ['Músculo', 'Diretas', 'Indiretas', 'Dias na semana', 'Semana anterior', 'Faixa-alvo', 'Situação', 'Planejado nas rotinas'],
-      numeric: [1, 2, 3, 4],
+      headers: ['Músculo', 'Diretas', 'Planejado', 'Situação', 'Indiretas', 'Dias na semana', 'Semana anterior'],
+      numeric: [1, 2, 4, 5, 6],
       rows: rows.map((r) => [
-        model.label(r.muscle), r.now.direct, r.now.indirect, r.now.sessions, r.before ? r.before.direct : '',
-        r.target ? `${r.target.min}–${r.target.max ?? '+'}` : 'sem faixa',
-        r.now.status ? STATUS[r.now.status].text : '',
-        r.planned ? `${r.planned.direct} diretas (indiretas ${r.planned.indirect})` : '']),
+        model.label(r.muscle), r.now.direct, r.now.planned ?? '', statusOf(r.now)?.label ?? 'fora das rotinas',
+        r.now.indirect, r.now.sessions, r.before ? r.before.direct : '']),
     }),
   });
 }
 
-function describe(model, r) {
-  const status = r.now.status ? `, ${STATUS[r.now.status].text.toLowerCase()}` : '';
-  return `${model.label(r.muscle)}: ${r.now.direct} séries diretas e ${r.now.indirect} indiretas${status}`;
+function describe(model, r, status) {
+  const plan = r.now.planned ? ` de ${r.now.planned} planejadas` : '';
+  return `${model.label(r.muscle)}: ${r.now.direct} séries diretas${plan}${status ? `, ${status.label.toLowerCase()}` : ''}`;
 }
 
-function tipRows(model, r, current) {
-  const lines = [
-    { title: model.label(r.muscle) },
-    { label: 'Diretas', value: num(r.now.direct) },
-    { label: 'Indiretas', value: num(r.now.indirect) },
-    { label: 'Dias com série direta', value: num(r.now.sessions) },
-  ];
+function tipRows(model, r, status) {
+  const lines = [{ title: model.label(r.muscle) }, { label: 'Diretas', value: num(r.now.direct) }];
+  if (r.now.planned) lines.push({ label: 'Planejado nas rotinas', value: num(r.now.planned) });
+  if (status) lines.push({ label: 'Situação', value: status.label });
+  lines.push({ label: 'Indiretas', value: num(r.now.indirect) });
+  lines.push({ label: 'Dias com série direta', value: num(r.now.sessions) });
   if (r.before) lines.push({ label: 'Diretas na semana anterior', value: num(r.before.direct) });
-  if (r.target) lines.push({ label: 'Faixa-alvo', value: `${r.target.min}–${r.target.max ?? '+'}` });
-  if (r.planned) lines.push({ label: 'Planejado nas rotinas', value: `${r.planned.direct} (indiretas ${r.planned.indirect})` });
-  lines.push({ muted: `Nível: ${r.now.level}` });
+  if (r.plan && r.plan.indirect) lines.push({ muted: `As rotinas têm também ${r.plan.indirect} séries indiretas` });
   return lines;
 }
 
-// ---------- séries e treinos por semana ----------
+// ---------- séries e treinos por semana (histórico, com os filtros) ----------
 
 function setsCard(model, state, weeks) {
   const muscle = state.muscle;
-  const d = model.data;
-  const phases = d.phases;
+  const tooltipTitle = { callbacks: { title: (items) => weekTitle(items[0].label, weeks[items[0].dataIndex].inProgress) } };
 
   if (muscle !== 'all') {
     const rows = weeks.map((w) => model.volumeAt(w.week, muscle));
-    const target = d.config.targets[muscle];
+    const planned = model.data.plannedVolume[muscle]?.direct;
     return card({
       title: `Séries de ${model.label(muscle)} por semana`,
-      subtitle: target ? `Diretas e indiretas; a faixa sombreada é a faixa-alvo (${target.min}–${target.max ?? '+'} diretas)` : 'Diretas e indiretas por semana',
+      subtitle: planned ? `Diretas e indiretas; a linha é o planejado das rotinas (${planned} diretas por semana)` : 'Diretas e indiretas por semana',
       cls: 'col-6',
       body(view, ctx) {
         view.append(legend([
@@ -185,22 +183,23 @@ function setsCard(model, state, weeks) {
             { label: 'Diretas', data: rows.map((r) => r.direct), backgroundColor: color('--s1'), keyColor: color('--s1'), ...columnStyle },
             { label: 'Indiretas', data: rows.map((r) => r.indirect), backgroundColor: color('--s2'), keyColor: color('--s2'), ...columnStyle },
           ],
-          options: { plugins: { tooltip: { callbacks: { title: (items) => weekTitle(items[0].label, weeks[items[0].dataIndex].inProgress) } } } },
-          plugins: { phases, band: target ? { min: target.min, max: target.max } : {} },
+          options: { plugins: { tooltip: tooltipTitle } },
+          plugins: { lines: planned ? [{ y: planned, label: `planejado: ${planned}` }] : [] },
           label: `Séries diretas e indiretas de ${model.label(muscle)} por semana`,
         });
       },
       table: () => ({
-        headers: ['Semana', 'Diretas', 'Indiretas', 'Dias'],
-        numeric: [1, 2, 3],
-        rows: weeks.map((w, i) => [fmtDate(w.week), rows[i].direct, rows[i].indirect, rows[i].sessions]),
+        headers: ['Semana', 'Diretas', 'Indiretas', 'Dias', 'Planejado'],
+        numeric: [1, 2, 3, 4],
+        rows: weeks.map((w, i) => [fmtDate(w.week), rows[i].direct, rows[i].indirect, rows[i].sessions, planned ?? '']),
       }),
     });
   }
 
+  const planned = model.plannedTotal;
   return card({
     title: 'Séries por semana',
-    subtitle: 'Séries de trabalho (sem aquecimento); a coluna clara é a semana em andamento',
+    subtitle: `Séries de trabalho (sem aquecimento)${planned ? '; a linha é o total planejado das rotinas' : ''}. A coluna clara é a semana em andamento`,
     cls: 'col-6',
     body(view, ctx) {
       mountChart(view, ctx, {
@@ -213,8 +212,8 @@ function setsCard(model, state, weeks) {
           keyColor: color('--s1'),
           ...columnStyle,
         }],
-        options: { plugins: { tooltip: { callbacks: { title: (items) => weekTitle(items[0].label, weeks[items[0].dataIndex].inProgress) } } } },
-        plugins: { phases },
+        options: { plugins: { tooltip: tooltipTitle } },
+        plugins: { lines: planned ? [{ y: planned, label: `planejado: ${planned}` }] : [] },
         label: 'Séries de trabalho por semana',
       });
     },
@@ -251,7 +250,7 @@ function workoutsCard(model, weeks) {
           scales: { y: { suggestedMax: goal + 1, ticks: { stepSize: 1 } } },
           plugins: { tooltip: { callbacks: { title: (items) => weekTitle(items[0].label, weeks[items[0].dataIndex].inProgress) } } },
         },
-        plugins: { lines: [{ y: goal, label: `meta: ${goal}` }], phases: model.data.phases },
+        plugins: { lines: [{ y: goal, label: `meta: ${goal}` }] },
         label: 'Treinos por semana',
       });
     },
@@ -268,11 +267,20 @@ function workoutsCard(model, weeks) {
 const CLAMP_MIN = -100;
 const CLAMP_MAX = 150;
 
-function changeCard(model, weeks) {
+/** Variação semanal das séries: do total ou, com um músculo escolhido, das séries diretas dele. */
+function changeCard(model, state, weeks) {
+  const muscle = state.muscle;
   const closed = weeks.filter((w) => !w.inProgress);
+  const rows = closed.map((w) => {
+    if (muscle === 'all') return { change: w.changePercent ?? null, sets: w.sets };
+    const row = model.volumeAt(w.week, muscle);
+    return { change: row.changePercent ?? null, sets: row.direct };
+  });
+  const subject = muscle === 'all' ? 'Séries' : `Séries diretas de ${model.label(muscle)}`;
+
   return card({
-    title: 'Variação semanal de volume',
-    subtitle: 'Séries em relação à semana anterior; quedas fortes costumam ser semanas de deload',
+    title: muscle === 'all' ? 'Variação semanal de volume' : `Variação semanal: ${model.label(muscle)}`,
+    subtitle: `${subject} em relação à semana anterior; quedas fortes costumam ser semanas de deload`,
     cls: 'col-6',
     body(view, ctx) {
       mountChart(view, ctx, {
@@ -280,8 +288,8 @@ function changeCard(model, weeks) {
         labels: closed.map((w) => w.week),
         datasets: [{
           label: 'Variação',
-          data: closed.map((w) => (w.changePercent == null ? null : Math.max(CLAMP_MIN, Math.min(CLAMP_MAX, w.changePercent)))),
-          backgroundColor: closed.map((w) => ((w.changePercent ?? 0) >= 0 ? color('--diverge-pos') : color('--diverge-neg'))),
+          data: rows.map((r) => (r.change == null ? null : Math.max(CLAMP_MIN, Math.min(CLAMP_MAX, r.change)))),
+          backgroundColor: rows.map((r) => ((r.change ?? 0) >= 0 ? color('--diverge-pos') : color('--diverge-neg'))),
           keyColor: color('--diverge-pos'),
           ...columnStyle,
           borderRadius: 3,
@@ -294,21 +302,21 @@ function changeCard(model, weeks) {
               callbacks: {
                 title: (items) => weekTitle(items[0].label, false),
                 label: (item) => {
-                  const w = closed[item.dataIndex];
-                  return ` ${signedPercent(w.changePercent)} (${num(w.sets)} séries)`;
+                  const r = rows[item.dataIndex];
+                  return r.change == null ? ' sem semana anterior para comparar' : ` ${signedPercent(r.change)} (${num(r.sets)} séries)`;
                 },
               },
             },
           },
         },
-        plugins: { lines: [{ y: 0, strong: true }], phases: model.data.phases },
-        label: 'Variação percentual das séries por semana',
+        plugins: { lines: [{ y: 0, strong: true }] },
+        label: `Variação percentual das ${subject.toLowerCase()} por semana`,
       });
     },
     table: () => ({
       headers: ['Semana', 'Séries', 'Variação'],
       numeric: [1, 2],
-      rows: closed.map((w) => [fmtDate(w.week), w.sets, w.changePercent == null ? '' : signedPercent(w.changePercent)]),
+      rows: closed.map((w, i) => [fmtDate(w.week), rows[i].sets, rows[i].change == null ? '' : signedPercent(rows[i].change)]),
     }),
   });
 }
@@ -327,7 +335,7 @@ function durationCard(model, weeks) {
         labels: weeks.map((w) => w.week),
         datasets: [{
           label: 'Duração média (min)',
-          data: weeks.map((w) => w.averageDurationMinutes),
+          data: weeks.map((w) => w.averageDurationMinutes ?? null),
           borderColor: color('--s1'),
           backgroundColor: alpha(color('--s1'), 0.1),
           keyColor: color('--s1'),
@@ -342,7 +350,7 @@ function durationCard(model, weeks) {
           spanGaps: true,
         }],
         options: {
-          scales: { y: { beginAtZero: false, ticks: { callback: (v) => `${v} min` } } },
+          scales: { y: { beginAtZero: false, grace: '10%', ticks: { callback: (v) => `${v} min` } } },
           plugins: {
             tooltip: {
               callbacks: {
@@ -352,7 +360,7 @@ function durationCard(model, weeks) {
             },
           },
         },
-        plugins: { phases: model.data.phases, lines: avg != null ? [{ y: avg }] : [] },
+        plugins: { lines: avg != null ? [{ y: avg }] : [] },
         label: 'Duração média dos treinos por semana',
       });
     },
@@ -360,73 +368,6 @@ function durationCard(model, weeks) {
       headers: ['Semana', 'Duração média', 'Treinos'],
       numeric: [1, 2],
       rows: weeks.map((w) => [fmtDate(w.week), w.averageDurationMinutes == null ? '' : minutes(w.averageDurationMinutes), w.workouts]),
-    }),
-  });
-}
-
-// ---------- calendário de treinos ----------
-
-function calendarCard(model, state) {
-  const d = model.data;
-  const columns = 53; // sempre o último ano, que preenche o cartão e mostra o ritmo de longo prazo
-  const lastMonday = mondayOf(d.today);
-  const firstMonday = addDays(lastMonday, -7 * (columns - 1));
-  const byDate = new Map(d.calendar.map((day) => [day.date, day]));
-
-  const days = [];
-  for (let c = 0; c < columns; c++) {
-    for (let r = 0; r < 7; r++) {
-      const date = addDays(firstMonday, c * 7 + r);
-      days.push({ date, column: c, data: byDate.get(date) || null, future: date > d.today });
-    }
-  }
-  const sorted = days.filter((x) => x.data && x.data.sets > 0).map((x) => x.data.sets).sort((a, b) => a - b);
-  const q = (p) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] ?? 0;
-  const [t1, t2, t3] = [q(0.25), q(0.5), q(0.75)];
-  const level = (sets) => (sets <= 0 ? 0 : sets <= t1 ? 1 : sets <= t2 ? 2 : sets <= t3 ? 3 : 4);
-
-  const trained = days.filter((x) => x.data).length;
-  return card({
-    title: 'Calendário de treinos',
-    subtitle: `${trained} dias treinados no último ano; quanto mais forte a cor, mais séries no dia`,
-    cls: 'col-12',
-    body(view) {
-      const grid = el('div', { class: 'cal-grid' });
-      const months = el('div', { class: 'cal-months' });
-      let lastMonth = '';
-      days.forEach((x) => {
-        if (x.column !== undefined && x.date === addDays(firstMonday, x.column * 7)) {
-          const month = x.date.slice(0, 7);
-          if (month !== lastMonth) {
-            months.append(el('span', { style: `left:${x.column * 17}px`, text: monthShort(x.date) }));
-            lastMonth = month;
-          }
-        }
-        const sets = x.data ? x.data.sets : 0;
-        const cell = el('span', {
-          class: `cell ${x.future ? 'future' : x.data ? `l${Math.max(1, level(sets))}` : ''}`,
-          role: 'img',
-          'aria-label': x.data ? `${fmtDate(x.date)}: ${x.data.workouts} treino(s), ${x.data.sets} séries` : `${fmtDate(x.date)}: sem treino`,
-        });
-        if (!x.future) {
-          attachTip(cell, () => (x.data
-            ? [{ title: `${weekdayName(x.date)}, ${fmtDate(x.date)}` }, { label: 'Treinos', value: num(x.data.workouts) }, { label: 'Séries', value: num(x.data.sets) }]
-            : [{ title: `${weekdayName(x.date)}, ${fmtDate(x.date)}` }, { muted: 'Sem treino' }]));
-        }
-        grid.append(cell);
-      });
-      view.append(
-        el('div', { class: 'cal' },
-          el('div', { class: 'cal-days', 'aria-hidden': 'true' }, ['seg', '', 'qua', '', 'sex', '', 'dom'].map((t) => el('span', { text: t }))),
-          el('div', { class: 'cal-main' }, months, grid)),
-        el('div', { class: 'scale', 'aria-hidden': 'true' },
-          'menos', el('span', { class: 'cell' }), el('span', { class: 'cell l1' }), el('span', { class: 'cell l2' }),
-          el('span', { class: 'cell l3' }), el('span', { class: 'cell l4' }), 'mais'));
-    },
-    table: () => ({
-      headers: ['Data', 'Treinos', 'Séries'],
-      numeric: [1, 2],
-      rows: days.filter((x) => x.data).reverse().map((x) => [fmtDate(x.date), x.data.workouts, x.data.sets]),
     }),
   });
 }

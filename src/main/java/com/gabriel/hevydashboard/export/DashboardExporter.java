@@ -9,10 +9,8 @@ import com.gabriel.hevydashboard.service.ActivityReport;
 import com.gabriel.hevydashboard.service.ExerciseReport;
 import com.gabriel.hevydashboard.service.MuscleNames;
 import com.gabriel.hevydashboard.service.MuscleVolume;
-import com.gabriel.hevydashboard.service.Phase;
 import com.gabriel.hevydashboard.service.SetRecord;
 import com.gabriel.hevydashboard.service.Settings;
-import com.gabriel.hevydashboard.service.TargetRange;
 import com.gabriel.hevydashboard.service.VolumeReport;
 
 import java.io.IOException;
@@ -23,7 +21,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -46,14 +43,13 @@ public final class DashboardExporter {
     /**
      * Tudo que o dashboard precisa.
      *
-     * @param plannedVolume       volume planejado das rotinas atuais, por grupo muscular (pode ser vazio)
-     * @param routineTemplateIds  templates dos exercícios das rotinas atuais
+     * @param plannedVolume        volume planejado das rotinas atuais, por grupo muscular: é a meta semanal de cada músculo
+     * @param routineTemplateIds   templates dos exercícios das rotinas atuais
      * @param routineExerciseNames nomes (em minúsculas) dos exercícios das rotinas atuais
      */
     public record Input(
             Collection<SetRecord> sets,
             Settings settings,
-            List<Phase> phases,
             Map<String, MuscleVolume> plannedVolume,
             Set<String> routineTemplateIds,
             Set<String> routineExerciseNames,
@@ -65,12 +61,11 @@ public final class DashboardExporter {
     public static DashboardData build(Input in) {
         Settings settings = in.settings();
         ActivityReport.Result activity = ActivityReport.build(in.sets(), settings, in.today());
-        List<VolumeReport.MuscleWeek> volume = VolumeReport.weekly(in.sets(), settings);
+        List<VolumeReport.MuscleWeek> volume = VolumeReport.weekly(in.sets(), settings, in.plannedVolume(), in.today());
         ExerciseReport.Result exercises = ExerciseReport.build(in.sets(), in.today(), settings.stagnationWeeks());
 
-        Set<String> muscles = new TreeSet<>(settings.targets().keySet());
+        Set<String> muscles = new TreeSet<>(in.plannedVolume().keySet());
         volume.forEach(row -> muscles.add(row.muscle()));
-        in.plannedVolume().keySet().forEach(muscles::add);
         Map<String, String> labels = new TreeMap<>();
         muscles.forEach(muscle -> labels.put(muscle, MuscleNames.label(muscle)));
 
@@ -81,7 +76,7 @@ public final class DashboardExporter {
                 in.generatedAt().toString(),
                 in.sample(),
                 in.today(),
-                configOf(settings),
+                new DashboardData.Config(settings.workoutsPerWeek(), settings.stagnationWeeks()),
                 labels,
                 new DashboardData.Consistency(
                         activity.consistency().workoutsPerWeek(),
@@ -91,20 +86,9 @@ public final class DashboardExporter {
                 activity.weeks().stream().map(DashboardExporter::weekOf).toList(),
                 volume.stream().map(DashboardExporter::volumeRowOf).toList(),
                 planned,
-                activity.calendar().stream()
-                        .map(d -> new DashboardData.Day(d.date(), d.workouts(), d.validSets())).toList(),
                 exercises.exercises().stream().map(e -> exerciseOf(e, in)).toList(),
                 exercises.prEvents().stream()
-                        .map(e -> new DashboardData.PrEvent(e.date(), e.exercise(),
-                                e.type().name().toLowerCase(Locale.ROOT), round1(e.value())))
-                        .toList(),
-                activity.workouts().stream()
-                        .map(w -> new DashboardData.WorkoutData(w.workoutId(), w.date(), w.title(),
-                                w.durationMinutes(), w.validSets(), round1(w.tonnageKg())))
-                        .toList(),
-                in.phases().stream()
-                        .sorted(Comparator.comparing(Phase::start))
-                        .map(p -> new DashboardData.PhaseData(p.name(), p.start(), p.end()))
+                        .map(e -> new DashboardData.PrEvent(e.date(), e.exercise(), e.type().name().toLowerCase(Locale.ROOT), round1(e.value())))
                         .toList());
     }
 
@@ -129,28 +113,15 @@ public final class DashboardExporter {
     // Conversões
     // ------------------------------------------------------------------
 
-    private static DashboardData.Config configOf(Settings settings) {
-        Map<String, DashboardData.Range> targets = new TreeMap<>();
-        settings.targets().forEach((muscle, range) -> targets.put(muscle, new DashboardData.Range(range.min(), limitOf(range))));
-        List<DashboardData.Level> levels = settings.levels().levels().stream()
-                .map(l -> new DashboardData.Level(l.name(), l.range().min(), limitOf(l.range())))
-                .toList();
-        return new DashboardData.Config(settings.workoutsPerWeek(), settings.stagnationWeeks(), targets, levels);
-    }
-
-    private static Integer limitOf(TargetRange range) {
-        return range.max() == TargetRange.NO_LIMIT ? null : range.max();
-    }
-
     private static DashboardData.Week weekOf(ActivityReport.WeekSummary w) {
         return new DashboardData.Week(w.week(), w.inProgress(), w.complete(), w.workouts(), w.validSets(),
-                round1(w.tonnageKg()), round1(w.averageDurationMinutes()), w.repsLow(), w.repsMid(), w.repsHigh(),
-                w.pushSets(), w.pullSets(), w.legsSets(), w.coreSets(), round1(w.setsChangePercent()));
+                round1(w.averageDurationMinutes()), round1(w.setsChangePercent()));
     }
 
     private static DashboardData.VolumeRow volumeRowOf(VolumeReport.MuscleWeek row) {
         return new DashboardData.VolumeRow(row.week(), row.muscle(), row.direct(), row.indirect(), row.sessions(),
-                row.level(), row.status() == null ? null : row.status().name().toLowerCase(Locale.ROOT));
+                row.planned(), row.status() == null ? null : row.status().name().toLowerCase(Locale.ROOT),
+                round1(row.directChangePercent()));
     }
 
     private static DashboardData.ExerciseData exerciseOf(ExerciseReport.ExerciseSummary e, Input in) {
@@ -162,15 +133,21 @@ public final class DashboardExporter {
                 in.settings().rules().groupOf(e.primaryMuscle()),
                 inRoutine,
                 e.lastTrained(),
-                e.trend().progress().name().toLowerCase(Locale.ROOT),
-                round1(e.trend().recentBest()),
-                round1(e.trend().previousBest()),
                 markOf(e.records().maxWeightKg()),
                 markOf(e.records().maxReps()),
-                markOf(e.records().bestOneRepMax()),
-                e.sessions().stream()
-                        .map(s -> new DashboardData.Session(s.date(), round1(s.maxWeightKg()), round1(s.bestOneRepMax())))
-                        .toList());
+                e.lastChange() == null ? null : new DashboardData.Change(
+                        e.lastChange().change().name().toLowerCase(Locale.ROOT),
+                        pointOf(e.lastChange().previous()),
+                        pointOf(e.lastChange().current())),
+                new DashboardData.Trend(
+                        e.trend().progress().name().toLowerCase(Locale.ROOT),
+                        e.trend().recent() == null ? null : pointOf(e.trend().recent()),
+                        e.trend().previous() == null ? null : pointOf(e.trend().previous())),
+                e.sessions().stream().map(DashboardExporter::pointOf).toList());
+    }
+
+    private static DashboardData.Point pointOf(ExerciseReport.SessionPoint point) {
+        return new DashboardData.Point(point.date(), round1(point.weightKg()), point.reps());
     }
 
     private static DashboardData.Mark markOf(ExerciseReport.Mark mark) {
