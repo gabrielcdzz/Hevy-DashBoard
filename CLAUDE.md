@@ -29,6 +29,8 @@ mvn test                                               # todos os testes
 mvn test -Dtest=HevyClientTest                         # uma classe
 mvn test -Dtest=HevyJsonTest#leEventoDeTreinoApagado   # um método
 mvn package                                            # gera target/hevy-dashboard-0.1.0-SNAPSHOT.jar (fat jar via shade)
+java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar dashboard # o do dia a dia: sync + abre o site com os dados reais (no Windows: clique duplo em abrir-dashboard.bat)
+java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar serve     # só abre o site (dados reais se site/data/dashboard.json existir, senão o exemplo)
 java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar sync     # Hevy -> planilha -> site/data/dashboard.json (precisa de HEVY_API_KEY, GOOGLE_APPLICATION_CREDENTIALS e SPREADSHEET_ID)
 java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar sample   # regenera site/data/sample.json (dados fictícios, vão para o Git)
 java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar check    # só testa a conexão com o Hevy e a planilha
@@ -97,7 +99,7 @@ Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I
 - O site é HTML, CSS e JavaScript puros (módulos ES), sem build. `site/vendor/chart.umd.js` é o Chart.js 4.4.7 copiado para o repositório (MIT, licença em `site/vendor/`).
 - `site/js/data.js` tenta `data/dashboard.json` (dados reais, **no `.gitignore`**, nunca commitar) e, se não existir, usa `data/sample.json`. O 404 do primeiro no console é esperado.
 - Regras do site: texto vindo dos dados entra no DOM por `textContent`/nós de texto, nunca `innerHTML`; todo gráfico tem a tabela equivalente (`card({ table })`, botão "Ver tabela"); status (abaixo, dentro, acima, progredindo, estagnado) sempre com ícone e texto; um eixo por gráfico; cores só pelas variáveis CSS (`--s1`, `--band`, `--heat-*`...), que têm valores para claro e escuro; os filtros (período, músculo, exercício) ficam em uma linha só e valem para todos os cartões; um cartão só desenha depois de estar no documento (`card.render()`).
-- Para ver o site: `npx serve site` (o `file://` não carrega os JSON). Os testes de navegador ficam em `site/tests` (`npm ci && npm test`, precisa do Google Chrome; `CHROME_PATH` aponta para ele se não estiver no lugar padrão). Eles sempre usam os dados de exemplo: o servidor de teste esconde `data/dashboard.json`. Além dos testes, confira sempre as capturas de tela (claro, escuro, 390 px): o código sozinho não mostra colisões de rótulos. O workflow publica uma **lista explícita de arquivos** (site + `sample.json`); nunca troque isso por copiar a pasta inteira.
+- Para ver o site: `java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar serve` (ou `dashboard`, que sincroniza antes; no Windows, o clique duplo em `abrir-dashboard.bat`). O `SiteServer` (pacote `web`) só escuta em localhost, porque o site pode estar mostrando treinos reais, e não entrega nada fora da pasta `site/`; o `file://` não funciona porque o navegador bloqueia o carregamento do JSON. Os testes de navegador ficam em `site/tests` (`npm ci && npm test`, precisa do Google Chrome; `CHROME_PATH` aponta para ele se não estiver no lugar padrão). Eles sempre usam os dados de exemplo: o servidor de teste esconde `data/dashboard.json`. Além dos testes, confira sempre as capturas de tela (claro, escuro, 390 px): o código sozinho não mostra colisões de rótulos. O workflow publica uma **lista explícita de arquivos** (site + `sample.json`); nunca troque isso por copiar a pasta inteira.
 
 ## Segredos
 

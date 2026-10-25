@@ -84,33 +84,36 @@ src/main/java/com/gabriel/hevydashboard/
 ├── sheets/    SheetsClient (Google Sheets), tabelas da planilha, configurações, repetição de chamadas
 ├── sync/      SyncService: a execução completa
 ├── export/    DashboardExporter e os dados de exemplo
-└── Main.java  comandos: sync, sample, check
+├── web/       SiteServer: servidor local (só localhost) que abre o dashboard
+└── Main.java  comandos: dashboard, sync, serve, sample, check
 site/          o dashboard (HTML, CSS e JavaScript puros) e seus testes de navegador
 docs/          plano original, decisões e estado do projeto
+abrir-dashboard.bat   clique duplo no Windows: sincroniza e abre o dashboard
 ```
 
 A lógica de cálculo fica isolada em `service`, sem entrada e saída, para ser testada sozinha. O acesso ao Hevy e à planilha passa por interfaces (`HevySource`, `SheetsGateway`), o que permite testar a sincronização inteira sem rede.
 
 ## Como executar
 
+Precisa do **JDK 21** e do **Maven**. Nada mais: o dashboard é aberto por um servidor que vem no próprio programa.
+
 ### Ver o exemplo (sem conta nenhuma)
 
-Precisa de JDK 21, Maven e Node.js.
-
 ```bash
-mvn package                                        # compila e roda os testes
-java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar sample   # gera site/data/sample.json
-npx serve site                                     # abra o endereço que aparecer
+mvn package                                                # compila e roda os testes
+java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar serve   # abre o dashboard no navegador
 ```
 
-O site precisa de um servidor local: o navegador não carrega o arquivo de dados quando a página é aberta direto do disco.
+Sem `site/data/dashboard.json`, o site mostra os dados de exemplo (um usuário fictício). O servidor escuta só em `localhost`, então só o seu computador consegue abri-lo.
 
-### Usar com os seus treinos
+### Ver os seus próprios treinos
+
+O site publicado na internet mostra **sempre** o exemplo. Para ver os seus treinos, você roda o programa no seu computador: ele busca os dados no Hevy e gera `site/data/dashboard.json`, um arquivo que **fica só na sua máquina** (está no `.gitignore`). Se esse arquivo existe, o site o usa no lugar do exemplo.
 
 1. **Chave do Hevy.** No app, em Configurações, gere uma chave da API (exige Hevy Pro).
 2. **Google Cloud.** Crie um projeto, ative a *Google Sheets API*, crie uma conta de serviço, baixe a credencial em JSON e guarde-a **fora do Git** (a pasta `secrets/` já está no `.gitignore`).
 3. **Planilha.** Crie uma planilha vazia e compartilhe com o e-mail da conta de serviço, como Editor. O ID é o trecho da URL entre `/d/` e `/edit`.
-4. **Variáveis de ambiente.**
+4. **Variáveis de ambiente** (no Windows, com `setx`; depois feche e abra o terminal):
 
    | Variável | Conteúdo |
    |---|---|
@@ -118,14 +121,23 @@ O site precisa de um servidor local: o navegador não carrega o arquivo de dados
    | `GOOGLE_APPLICATION_CREDENTIALS` | caminho do JSON da conta de serviço |
    | `SPREADSHEET_ID` | o ID da planilha |
 
-5. **Sincronize e veja.**
+5. **Abrir.** Dê dois cliques em **`abrir-dashboard.bat`** (Windows) ou rode:
 
    ```bash
-   java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar sync   # grava site/data/dashboard.json
-   npx serve site
+   java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar dashboard
    ```
 
-   Se `site/data/dashboard.json` existe, o site o usa no lugar do exemplo. Na primeira execução o programa cria as abas de configuração na planilha, já preenchidas com valores iniciais que você pode editar.
+   O programa sincroniza com o Hevy (só o que mudou desde a última vez) e abre o dashboard com os seus dados. Na primeira execução ele importa o histórico inteiro e cria, na planilha, as abas de configuração com valores iniciais que você pode editar.
+
+Quando atualizar o código, rode `mvn package` de novo para gerar o jar novo.
+
+| Comando | O que faz |
+|---|---|
+| `dashboard` | sincroniza com o Hevy e abre o dashboard (o do dia a dia) |
+| `sync` | só sincroniza e gera `site/data/dashboard.json` |
+| `serve [porta]` | só abre o dashboard (a porta padrão é 8080) |
+| `sample` | regera os dados de exemplo em `site/data/sample.json` |
+| `check` | testa a conexão com o Hevy e com a planilha |
 
 ## Testes
 
