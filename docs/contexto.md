@@ -96,9 +96,9 @@ A soma das diretas (76) é igual ao total de séries de trabalho, e isso deve va
 ## 3. Estado atual
 
 - Cliente do Hevy, mapeamento JSON e modelos prontos, com testes passando.
-- **Conexão real confirmada (24/10/2026):** o jar devolveu 800 treinos, 5 rotinas e 456 templates. As séries de cada rotina (PULL 2: 28, PUSH 2: 24, LEGS: 25, PULL: 27, PUSH: 23) batem com o `set_count` do Hevy. O mapeamento do JSON está validado.
-- **Dados reais do histórico (24/10/2026):** 800 treinos e 14.799 séries (12.390 de trabalho, 2.409 de aquecimento, nenhum `failure` nem `dropset`). Títulos dos treinos: `TREINO A` a `TREINO E` (os antigos) e `PUSH`, `PUSH 2`, `PULL`, `PULL 2`, `LEGS` (os atuais); a coluna `rotina` usa o título do treino. 239 séries não têm carga (peso corporal) e 20 não têm repetições. **Nenhuma série tem RPE**, então "RPE médio" da segunda fase não é viável enquanto o RPE não for preenchido no Hevy. O endpoint de eventos devolveu 803 eventos (800 `updated` e 3 `deleted`).
-- A aba `series_treinos` da planilha real já foi preenchida com os 800 treinos (14.799 linhas). A `estado_sync` segue vazia de propósito: a primeira sincronização completa refaz a importação, sem duplicar.
+- **Conexão real confirmada (24/10/2026):** a API respondeu e as séries de cada uma das 5 rotinas batem com o `set_count` do Hevy. O mapeamento do JSON está validado.
+- **Dados reais do usuário:** os números do histórico dele (contagens, semanas, recordes, séries com erro de digitação) **não ficam neste arquivo**: o repositório é público e ele pediu para manter os dados reais só no computador dele. Aprendizados que valem para qualquer usuário: os títulos dos treinos mudam com o tempo, há séries sem carga (peso corporal), o RPE só existe se for preenchido no Hevy, e o endpoint de eventos devolve também as exclusões.
+- A aba `series_treinos` da planilha real já está preenchida e a `estado_sync` guarda a data da última sincronização.
 - Google Cloud configurado: credencial em `secrets/service-account.json` (ignorada pelo Git), variáveis `GOOGLE_APPLICATION_CREDENTIALS` e `SPREADSHEET_ID` definidas com `setx`. A planilha ainda está vazia.
 
 ## 4. Estrutura planejada da planilha (Google Sheets)
@@ -152,9 +152,9 @@ As abas `volume_*` nunca devem ser editadas à mão, porque o script as sobrescr
 2. ~~**Cálculo de volume (`service`)**~~ (feito em 24/10/2026, `VolumeCalculatorTest` e `WeeksTest` passando):
    - regra de série válida, contagem direta e indireta, ajustes manuais, semana de segunda a domingo em America/Sao_Paulo
    - testes JUnit, incluindo um teste com as 5 rotinas que confira **exatamente** os números da seção 2, mais casos de borda: treino no domingo à noite em UTC, dropset e falha contam, aquecimento não conta, indireta só para bíceps e tríceps, dorsal e costas superiores agrupados
-3. ~~**Configurar o Google Cloud**~~ (feito em 24/10/2026; projeto `hevy-dashboard-512621`, conta de serviço `hevy-sync`, planilha "Hevy Dashboard", acesso confirmado pelo `Main`) (o usuário faz, com o Claude guiando passo a passo): criar o projeto, ativar a Google Sheets API, criar a conta de serviço, baixar a credencial JSON (que nunca vai para o repositório; deve ficar em `secrets/`), criar a planilha e compartilhar com o e-mail da conta de serviço.
+3. ~~**Configurar o Google Cloud**~~ (feito em 24/10/2026; planilha criada, conta de serviço com acesso, confirmado pelo `Main`) (o usuário faz, com o Claude guiando passo a passo): criar o projeto, ativar a Google Sheets API, criar a conta de serviço, baixar a credencial JSON (que nunca vai para o repositório; deve ficar em `secrets/`), criar a planilha e compartilhar com o e-mail da conta de serviço.
 4. **Pacote `sheets`:** criar as abas se não existirem, escrever as séries brutas, ler `ajustes_manuais` e `config`, escrever as abas `volume_*`. Feito: conexão, `SyncState`, `series_treinos`. Falta: `series_rotinas`, `ajustes_manuais`, `config`, `volume_semanal`, `volume_rotinas`.
-5. ~~**Orquestração (`SyncService` + `Main`)**~~ (feito em 24/10/2026: `Main sync` importou os 800 treinos em 29 s e as execuções seguintes levam cerca de 11 s; o estado fica em `estado_sync`).
+5. ~~**Orquestração (`SyncService` + `Main`)**~~ (feito em 24/10/2026: `Main sync` importou o histórico inteiro em cerca de 30 s e as execuções seguintes levam cerca de 11 s; o estado fica em `estado_sync`).
 6. **Workflow do GitHub Actions** e cadastro dos secrets.
 7. **Looker Studio, aba Visão geral:** diretas e indiretas por músculo × faixa-alvo, semana atual × anterior, treinos por semana, sequência de semanas completas, calendário de calor, duração média.
 8. **Abas Exercícios e Análise.** Os dados extras saem do script ou de campos calculados:
@@ -182,7 +182,7 @@ Arquitetura nova: Hevy API → Java (sincronização e cálculo) → Google Shee
 
 **Decidido: a planilha é o armazenamento.** A sincronização incremental só traz o que mudou, então o histórico completo vem de reler a aba `series_treinos` com valores sem formatação (datas como número de série). As métricas recebem `SetRecord`s e não sabem de onde eles vêm. Para a duração média dos treinos, a aba ganhou a coluna `duracao_min`.
 
-**Dados reais (24/10/2026):** histórico de 27/02/2023 a 24/10/2026, 800 treinos, duração média de 91 minutos. Na semana de 12/10: bíceps 12 diretas (11 indiretas), ombros 12, costas 11, tríceps 8 (5), peito 7. Dos 21 exercícios das rotinas atuais, 6 estão progredindo, 11 estagnados, 1 inativo e 3 sem base de comparação (janelas de 3 semanas). Há 56 exercícios com carga no histórico e 603 recordes batidos, 27 deles em outubro/2026. Três séries parecem erro de digitação no Hevy (elevação lateral halter 10 kg x 101 em 19/06/2023, remada iso-lateral 43 kg x 101 em 30/08/2023 e rosca Scott 55 kg x 79 em 04/09/2023) e o usuário pode corrigi-las no app.
+**Dados reais:** ficam fora do repositório (ver acima).
 
 **Próxima versão (fora do escopo atual):** sistema com contas e login para outras pessoas conectarem o próprio Hevy. A API do Hevy não tem OAuth, só chave pessoal (exige Hevy Pro), então isso pede backend, banco de dados e guarda criptografada das chaves. O `HevyClient` e as métricas já não dependem de uma chave fixa nem da planilha, para facilitar essa fase.
 
@@ -194,7 +194,7 @@ Arquitetura nova: Hevy API → Java (sincronização e cálculo) → Google Shee
 - Frequência de um músculo: dias distintos da semana com pelo menos uma série direta (indireta não conta).
 - Exercícios com o mesmo template ou o mesmo nome são um exercício só (o usuário tem duas versões de "Remada Iso-Lateral (Máquina)"). "Elevação Lateral (Halter)" e "Elevação Lateral (Halter) 1" têm nomes diferentes e continuam separados.
 
-**Dados reais após as correções do usuário (24/10/2026):** 191 semanas de histórico, 91 delas completas (5 ou mais treinos), melhor sequência de 13 semanas, sequência atual de 1, 799 dias treinados, duração média de 91 minutos (nas últimas semanas fica perto de 60). 54 exercícios com carga e 635 recordes batidos. Semana de 19/10: 5 treinos, 66 séries, 31 toneladas.
+**Resultado com dados reais:** a sincronização, as métricas e o site funcionam com o histórico completo do usuário; os números dele ficam só no computador dele.
 
 **Site (24/10/2026):** feito em HTML, CSS e JavaScript puros com Chart.js 4.4.7 (copiado para `site/vendor/`, sem CDN). Três abas (Visão geral, Exercícios, Análise), filtros de período, músculo e exercício, modo claro e escuro, versão para celular, e uma tabela equivalente para cada gráfico. Tem 17 verificações de comportamento feitas no Chrome (tooltips, filtros, tema, troca de aba, clique nas linhas), mais capturas de tela nos três modos. Os dados de exemplo são gerados por `Main sample` e ficam em `site/data/sample.json` (no Git); os reais vão em `site/data/dashboard.json` (no `.gitignore`).
 
@@ -204,6 +204,5 @@ Arquitetura nova: Hevy API → Java (sincronização e cálculo) → Google Shee
 
 - O Google Sheets limita as requisições por minuto (erro 429). Uma execução faz mais de 30 chamadas, então o `SheetsClient` repete com espera crescente. Rodando de hora em hora o limite não é problema.
 - A API do Hevy devolve os exercícios padrão em inglês e os treinos guardam o nome no idioma do app. Só os exercícios personalizados têm o nome atualizado a partir do template (ver `SetRecords.withCurrentTemplates`).
-- Renomear um exercício no Hevy não gera evento de treino. O usuário renomeou a "Elevação Lateral (Halter) 1" para "Elevação Lateral (Halter)" e, com a atualização pelo template, o histórico dos dois ficou junto (272 sessões). A "Remada Iso-Lateral (Máquina)" tem 224.
+- Renomear um exercício personalizado no Hevy não gera evento de treino, então os treinos antigos continuam com o nome velho na planilha. Por isso o nome vem do template de hoje (ver `SetRecords.withCurrentTemplates`): renomear junta o histórico antigo e o novo, e dois templates com o mesmo nome viram um exercício só.
 - Cardio, corpo inteiro e "outros" não são músculos: o site os esconde das listas de volume e do filtro de músculo.
-- Dados reais hoje: 53 exercícios com carga (21 nas rotinas atuais), 191 semanas, 14.799 séries.

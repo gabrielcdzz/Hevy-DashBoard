@@ -24,7 +24,7 @@ O Hevy registra cada série, mas não responde às perguntas de quem treina com 
 
 Um programa em Java que lê a API do Hevy, guarda cada série em uma planilha (para o histórico ser seu e as regras poderem mudar sem perder nada) e gera um arquivo de dados que um site estático transforma em gráficos.
 
-- **Sincronização incremental.** A cada execução o programa pede ao Hevy só os treinos que foram salvos, editados ou apagados desde a última vez. Importar os 800 treinos de 3,5 anos leva cerca de 30 segundos; as execuções seguintes, cerca de 10.
+- **Sincronização incremental.** A cada execução o programa pede ao Hevy só os treinos que foram salvos, editados ou apagados desde a última vez. Importar um histórico de alguns anos (centenas de treinos) leva cerca de 30 segundos; as execuções seguintes, cerca de 10.
 - **Regras de contagem explícitas e testadas** (veja abaixo), com os números conferidos à mão contra o próprio Hevy.
 - **Configuração na própria planilha:** faixa-alvo por músculo, níveis de volume, fases (cutting, bulking), meta de treinos por semana. Nada disso exige mexer em código.
 - **Dashboard com três abas**, filtros de período, músculo e exercício, modo claro e escuro, versão para celular e uma tabela equivalente para cada gráfico.
