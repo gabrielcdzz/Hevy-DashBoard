@@ -1,0 +1,11 @@
+{
+  "name": "hevy-dashboard-site-tests",
+  "private": true,
+  "description": "Testes de navegador do dashboard (abre o site no Chrome e confere o comportamento)",
+  "scripts": {
+    "test": "node e2e.js"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.16.0"
+  }
+}

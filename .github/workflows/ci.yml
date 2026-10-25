@@ -1,0 +1,95 @@
+name: CI e site
+
+# A cada alteração: roda os testes do Java, confere que os dados de exemplo estão em dia e roda os testes
+# de navegador do site. Na branch main, publica o site no GitHub Pages.
+#
+# O site publicado usa SÓ os dados de exemplo. Os dados reais de treino ficam na máquina do dono
+# (comando "sync", arquivo site/data/dashboard.json, que está no .gitignore). Por isso este repositório
+# não precisa de nenhum segredo: nem a chave do Hevy, nem a credencial do Google.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  java:
+    name: Testes do Java
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Compila e roda os testes
+        run: mvn -B package
+
+      - name: Confere se os dados de exemplo estão em dia
+        # Se o código que gera o exemplo mudou e o site/data/sample.json não foi regerado, falha aqui.
+        run: |
+          java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar sample
+          git diff --exit-code -- site/data/sample.json
+
+  site:
+    name: Testes de navegador do site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: site/tests/package-lock.json
+
+      - name: Instala as dependências dos testes
+        working-directory: site/tests
+        run: npm ci
+
+      - name: Roda os testes no Chrome
+        working-directory: site/tests
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: npm test
+
+  deploy:
+    name: Publica o site
+    needs: [java, site]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Monta a pasta do site só com o que deve ser público
+        # Lista explícita de arquivos: nada além do site e dos dados de EXEMPLO chega ao ar.
+        run: |
+          mkdir -p _site/data
+          cp -r site/index.html site/css site/js site/vendor _site/
+          cp site/data/sample.json _site/data/
+          test ! -e _site/data/dashboard.json
+          find _site -type f | sort
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

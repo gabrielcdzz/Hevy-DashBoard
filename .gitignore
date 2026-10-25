@@ -28,3 +28,6 @@ credentials*.json
 
 # Dados reais de treino do dashboard (nunca vão para o Git; os de exemplo, sample.json, vão)
 site/data/dashboard.json
+
+# Dependências dos testes de navegador
+node_modules/

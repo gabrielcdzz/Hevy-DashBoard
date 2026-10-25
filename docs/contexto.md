@@ -198,7 +198,7 @@ Arquitetura nova: Hevy API → Java (sincronização e cálculo) → Google Shee
 
 **Site (24/10/2026):** feito em HTML, CSS e JavaScript puros com Chart.js 4.4.7 (copiado para `site/vendor/`, sem CDN). Três abas (Visão geral, Exercícios, Análise), filtros de período, músculo e exercício, modo claro e escuro, versão para celular, e uma tabela equivalente para cada gráfico. Tem 17 verificações de comportamento feitas no Chrome (tooltips, filtros, tema, troca de aba, clique nas linhas), mais capturas de tela nos três modos. Os dados de exemplo são gerados por `Main sample` e ficam em `site/data/sample.json` (no Git); os reais vão em `site/data/dashboard.json` (no `.gitignore`).
 
-**Pendências do site:** (1) levar os testes de navegador de `scratchpad` para dentro do repositório (`site/tests`, com `puppeteer-core` e o caminho do Chrome por variável de ambiente) e rodá-los no GitHub Actions; (2) publicar no GitHub Pages pelo Actions; (3) o README com capturas de tela. Publicar os dados reais no site público só com confirmação do usuário.
+**Pendências do site:** só dar `push` e ligar o GitHub Pages. Os testes de navegador já estão em `site/tests` (22 verificações) e o workflow de CI e publicação está em `.github/workflows/ci.yml`. O README está escrito, com capturas de tela dos dados de exemplo em `docs/img/`. **Decisão do usuário:** o site público mostra só o exemplo; os dados reais ficam no computador dele. Por isso não há workflow de sincronização no GitHub e nenhum segredo no repositório.
 
 **Aprendizados da sincronização real (24/10/2026):**
 

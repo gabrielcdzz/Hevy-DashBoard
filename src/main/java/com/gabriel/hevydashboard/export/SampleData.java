@@ -163,7 +163,7 @@ public final class SampleData {
             exercises.add(new Exercise(exercises.size(), move.title(), null, move.id(),
                     setsOf(move, exercises.size() < 2, weight, sets, random, true)));
         }
-        return new Workout(String.format("sample-%04d", number), plan.getKey(), null, start, end, end, start, exercises);
+        return new Workout(String.format(Locale.ROOT, "sample-%04d", number), plan.getKey(), null, start, end, end, start, exercises);
     }
 
     /** Aquecimento (50% e 70% da carga) nos dois primeiros exercícios, seguido das séries de trabalho. */

@@ -11,7 +11,7 @@ Documentação do projeto:
 - `docs/contexto.md`: decisões tomadas, regras de cálculo, **valores esperados para testes**, estrutura da planilha, lógica de sincronização e próximas etapas. Leia antes de começar uma etapa nova.
 - `docs/plano.md`: especificação original (abas e métricas do dashboard). Em caso de conflito, vale o `contexto.md`.
 
-Estado: tudo funciona de ponta a ponta com os dados reais do usuário (`Main sync` sincroniza o Hevy com a planilha e gera `site/data/dashboard.json`). Falta: o workflow do GitHub Actions (rodar `sync`, testar e publicar o site), levar os testes de navegador para dentro do repositório, e o README.
+Estado: tudo funciona de ponta a ponta com os dados reais do usuário (`Main sync` sincroniza o Hevy com a planilha e gera `site/data/dashboard.json`). O CI (`.github/workflows/ci.yml`) roda os testes do Java e do navegador e publica no GitHub Pages **só o site com os dados de exemplo**. Decisão do usuário (24/10/2026): os dados reais ficam só na máquina dele, então **não existe sincronização agendada no GitHub** e o repositório não guarda nenhum segredo. Para acompanhar os treinos, ele roda `sync` no próprio computador. Falta apenas dar `push` e ligar o GitHub Pages (Settings → Pages → Source: GitHub Actions).
 
 ## Como trabalhar com o usuário
 
@@ -97,7 +97,7 @@ Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I
 - O site é HTML, CSS e JavaScript puros (módulos ES), sem build. `site/vendor/chart.umd.js` é o Chart.js 4.4.7 copiado para o repositório (MIT, licença em `site/vendor/`).
 - `site/js/data.js` tenta `data/dashboard.json` (dados reais, **no `.gitignore`**, nunca commitar) e, se não existir, usa `data/sample.json`. O 404 do primeiro no console é esperado.
 - Regras do site: texto vindo dos dados entra no DOM por `textContent`/nós de texto, nunca `innerHTML`; todo gráfico tem a tabela equivalente (`card({ table })`, botão "Ver tabela"); status (abaixo, dentro, acima, progredindo, estagnado) sempre com ícone e texto; um eixo por gráfico; cores só pelas variáveis CSS (`--s1`, `--band`, `--heat-*`...), que têm valores para claro e escuro; os filtros (período, músculo, exercício) ficam em uma linha só e valem para todos os cartões; um cartão só desenha depois de estar no documento (`card.render()`).
-- Para ver o site: `npx serve site` (o `file://` não carrega os JSON). Para testar de verdade, use o Chrome sem janela via `puppeteer-core`: abra `http://localhost:PORTA/#exercicios`, capture erros do console e tire capturas de tela em claro, escuro e 390 px de largura. Confira sempre a imagem, o código sozinho não mostra colisões de rótulos.
+- Para ver o site: `npx serve site` (o `file://` não carrega os JSON). Os testes de navegador ficam em `site/tests` (`npm ci && npm test`, precisa do Google Chrome; `CHROME_PATH` aponta para ele se não estiver no lugar padrão). Eles sempre usam os dados de exemplo: o servidor de teste esconde `data/dashboard.json`. Além dos testes, confira sempre as capturas de tela (claro, escuro, 390 px): o código sozinho não mostra colisões de rótulos. O workflow publica uma **lista explícita de arquivos** (site + `sample.json`); nunca troque isso por copiar a pasta inteira.
 
 ## Segredos
 
