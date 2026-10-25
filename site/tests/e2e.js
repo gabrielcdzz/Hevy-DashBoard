@@ -56,6 +56,7 @@ async function main() {
   await wait(300);
 
   check('o site carrega com os dados de exemplo', await page.$eval('.sample-banner', (n) => n.textContent.includes('Dados de exemplo')));
+  check('a etiqueta do topo diz que são dados de exemplo', await page.$eval('#source-badge', (n) => n.textContent === 'Dados de exemplo'));
 
   // 1. tooltips feitos à mão
   await page.hover('.vrow');

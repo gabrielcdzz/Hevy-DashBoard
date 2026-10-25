@@ -29,7 +29,10 @@ async function main() {
 
   // A hora vem em UTC; o navegador mostra no fuso de quem está olhando.
   const generated = new Date(d.generatedAt);
-  $('meta').textContent = `Atualizado em ${generated.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}`;
+  // A etiqueta deixa claro, no topo da página, de quem são os números que estão na tela.
+  $('meta').replaceChildren(
+    el('span', { class: `badge ${d.sample ? '' : 'mine'}`, id: 'source-badge', text: d.sample ? 'Dados de exemplo' : 'Seus dados' }),
+    ` Atualizado em ${generated.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}`);
   $('footer').textContent = d.sample
     ? 'Dados de exemplo gerados pelo projeto. Código aberto no GitHub.'
     : 'Dados sincronizados do Hevy.';

@@ -321,3 +321,7 @@ table.data tr.clickable { cursor: pointer; }
 /* Nome do exercício pode quebrar linha; as demais colunas ficam em uma linha só. */
 table.data td:first-child { white-space: normal; min-width: 170px; max-width: 260px; }
 table.data td, table.data th { padding-left: 8px; padding-right: 8px; }
+
+/* Etiqueta de origem dos dados no topo: neutra para o exemplo, em destaque para os dados do próprio usuário. */
+.badge.mine { background: var(--s1); border-color: var(--s1); color: #fff; font-weight: 600; }
+.topbar .meta { display: inline-flex; align-items: center; gap: 8px; }
