@@ -134,7 +134,7 @@ mvn test                      # testes do Java
 cd site/tests && npm ci && npm test   # testes de navegador (precisa do Google Chrome)
 ```
 
-- **Java:** testes unitários dos cálculos (inclusive com as rotinas reais do autor e valores conferidos à mão), da leitura da API contra um servidor local falso, da planilha e da sincronização completa contra versões falsas do Hevy e do Sheets. Nenhum teste usa a rede.
+- **Java:** testes unitários dos cálculos (com as rotinas de um usuário fictício e contas feitas à mão), da leitura da API contra um servidor local falso, da planilha e da sincronização completa contra versões falsas do Hevy e do Sheets. Nenhum teste usa a rede.
 - **Navegador:** o site é aberto no Chrome sem janela, e o teste confere tooltips, a tabela equivalente de cada gráfico, filtros, tema, troca de aba, seleção de exercício e se nada estoura a largura de um celular.
 - **CI:** o GitHub Actions roda os dois conjuntos, confere que o `site/data/sample.json` está em dia com o código e publica o site.
 

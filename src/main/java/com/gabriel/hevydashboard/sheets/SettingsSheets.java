@@ -141,10 +141,9 @@ public class SettingsSheets {
         return range.max() == TargetRange.NO_LIMIT ? "" : range.max();
     }
 
+    /** Uma planilha nova não tem fase nenhuma: só o cabeçalho. O usuário preenche (ex.: cutting, 2026-01-05, vazio). */
     private static List<List<Object>> phasesSeed() {
-        return List.of(
-                List.of("fase", "inicio", "fim"),
-                List.of("cutting", "2026-09-14", ""));
+        return List.of(List.of("fase", "inicio", "fim"));
     }
 
     private static List<List<Object>> configSeed() {

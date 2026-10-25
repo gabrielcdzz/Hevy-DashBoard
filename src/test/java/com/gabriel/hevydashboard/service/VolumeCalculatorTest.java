@@ -27,7 +27,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VolumeCalculatorTest {
 
-    /** As 5 rotinas reais e os templates dos exercícios delas, salvos da API em 24/10/2026. */
+    /**
+     * As 5 rotinas de um usuário fictício (PUSH, PUSH 2, PULL, PULL 2 e LEGS) e os templates delas, no mesmo
+     * formato que a API do Hevy devolve. São dados inventados: nenhum treino de ninguém entra no repositório.
+     */
     private static List<Routine> rotinas;
     private static List<ExerciseTemplate> templates;
 
@@ -38,32 +41,52 @@ class VolumeCalculatorTest {
     }
 
     // ------------------------------------------------------------------
-    // Rotinas reais: os números conferidos à mão com o Hevy
+    // As 5 rotinas, com a conta feita à mão
     // ------------------------------------------------------------------
 
+    /**
+     * Conta feita à mão, exercício por exercício (séries de trabalho entre parênteses; só direta no primário,
+     * e indireta só para bíceps e tríceps; dorsal e costas superiores juntos como "back"):
+     * <pre>
+     * PUSH:   supino reto (3), supino inclinado (3), desenvolvimento (3), elevação lateral (4), tríceps na polia (3)
+     * PUSH 2: supino inclinado (3), elevação lateral (4), tríceps testa (3), desenvolvimento (3)
+     * PULL:   puxada alta (3), remada curvada (3), remada unilateral (3), crucifixo invertido (3), rosca direta (3)
+     * PULL 2: remada curvada (3), puxada alta (3), rosca martelo (3), crucifixo invertido (3), remada unilateral (3)
+     * LEGS:   agachamento (4), extensora (3), mesa flexora (3), stiff (3), panturrilha (3), abdominal (3)
+     *
+     * peito       diretas: 3 + 3 + 3                                  = 9
+     * ombros      diretas: 3 + 4 (PUSH) + 4 + 3 (PUSH 2) + 3 + 3 (crucifixo invertido) = 20
+     * tríceps     diretas: 3 (polia) + 3 (testa) = 6;  indiretas: 3 + 3 + 3 (PUSH) + 3 + 3 (PUSH 2) = 15
+     * costas      diretas: 3 puxadas + 3 remadas curvadas + 3 remadas unilaterais, nas duas rotinas = 18
+     * bíceps      diretas: 3 (rosca direta) + 3 (rosca martelo) = 6;  indiretas: 3 puxadas/remadas x 6 = 18
+     * quadríceps  diretas: 4 + 3 = 7
+     * posterior   diretas: 3 + 3 = 6
+     * panturrilha 3, abdômen 3
+     * </pre>
+     * Glúteos (agachamento e stiff), antebraço, ombro nos supinos e lombar são secundários que não contam.
+     */
     @Test
-    void volumePlanejadoDasCincoRotinasBateComOConferidoNoHevy() {
+    void volumePlanejadoDasCincoRotinasConfereComAContaFeitaAMao() {
         VolumeCalculator calculator = new VolumeCalculator(templates, VolumeRules.DEFAULT);
 
         Map<String, MuscleVolume> volume = calculator.volumeOf(todosOsExercicios(rotinas));
 
         Map<String, MuscleVolume> esperado = Map.ofEntries(
-                entry("shoulders", new MuscleVolume(19, 0)),
-                entry("biceps", new MuscleVolume(11, 10)),
-                entry("back", new MuscleVolume(10, 0)),
-                entry("triceps", new MuscleVolume(8, 6)),
-                entry("abdominals", new MuscleVolume(6, 0)),
+                entry("chest", new MuscleVolume(9, 0)),
+                entry("shoulders", new MuscleVolume(20, 0)),
+                entry("triceps", new MuscleVolume(6, 15)),
+                entry("back", new MuscleVolume(18, 0)),
+                entry("biceps", new MuscleVolume(6, 18)),
+                entry("quadriceps", new MuscleVolume(7, 0)),
                 entry("hamstrings", new MuscleVolume(6, 0)),
-                entry("chest", new MuscleVolume(5, 0)),
-                entry("forearms", new MuscleVolume(4, 0)),
-                entry("quadriceps", new MuscleVolume(4, 0)),
-                entry("calves", new MuscleVolume(3, 0)));
+                entry("calves", new MuscleVolume(3, 0)),
+                entry("abdominals", new MuscleVolume(3, 0)));
         assertEquals(esperado, volume);
     }
 
     @Test
     void seriesDeTrabalhoDeCadaRotina() {
-        Map<String, Long> esperado = Map.of("PUSH", 14L, "PUSH 2", 15L, "PULL", 15L, "PULL 2", 16L, "LEGS", 16L);
+        Map<String, Long> esperado = Map.of("PUSH", 16L, "PUSH 2", 13L, "PULL", 15L, "PULL 2", 15L, "LEGS", 19L);
 
         for (Routine rotina : rotinas) {
             long trabalho = rotina.exercises().stream()
@@ -82,7 +105,7 @@ class VolumeCalculatorTest {
                 .mapToInt(MuscleVolume::direct)
                 .sum();
 
-        assertEquals(76, diretas);
+        assertEquals(78, diretas); // 16 + 13 + 15 + 15 + 19
     }
 
     // ------------------------------------------------------------------

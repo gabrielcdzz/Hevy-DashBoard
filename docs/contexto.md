@@ -40,58 +40,32 @@ Fluxo: **Hevy API → Java → Google Sheets → Looker Studio**, rodando no **G
 
 ### Valores esperados (usar como teste)
 
-Volume planejado das 5 rotinas, uma vez cada, com as regras acima. Conferido com o `set_count` do Hevy em 24/10/2026, já com o Straight Leg Deadlift no lugar do Deadlift (Smith Machine) na LEGS.
+Volume planejado das 5 rotinas **fictícias** de `src/test/resources/fixtures/` (as mesmas do usuário de exemplo gerado por `SampleData`). As rotinas reais do autor não ficam no repositório. A conta é feita à mão, exercício por exercício, no comentário de `VolumeCalculatorTest`, com as regras acima.
 
-| Rotina | Séries de trabalho | Aquecimento | `set_count` |
-|---|---|---|---|
-| PUSH | 14 | 9 | 23 |
-| PUSH 2 | 15 | 9 | 24 |
-| PULL | 15 | 12 | 27 |
-| PULL 2 | 16 | 12 | 28 |
-| LEGS | 16 | 9 | 25 |
-| **Total** | **76** | 51 | 127 |
+| Rotina | Séries de trabalho |
+|---|---|
+| PUSH | 16 |
+| PUSH 2 | 13 |
+| PULL | 15 |
+| PULL 2 | 15 |
+| LEGS | 19 |
+| **Total** | **78** |
 
-| Músculo (Hevy) | Diretas | Indiretas |
+| Grupo | Diretas | Indiretas |
 |---|---|---|
-| shoulders | 19 | 0 |
-| biceps | 11 | 10 |
-| back (lats + upper_back) | 10 | 0 |
-| triceps | 8 | 6 |
-| abdominals | 6 | 0 |
+| shoulders | 20 | 0 |
+| back (dorsal + costas superiores) | 18 | 0 |
+| chest | 9 | 0 |
+| quadriceps | 7 | 0 |
+| biceps | 6 | 18 |
+| triceps | 6 | 15 |
 | hamstrings | 6 | 0 |
-| chest | 5 | 0 |
-| forearms | 4 | 0 |
-| quadriceps | 4 | 0 |
 | calves | 3 | 0 |
+| abdominals | 3 | 0 |
 
-A soma das diretas (76) é igual ao total de séries de trabalho, e isso deve valer sempre.
+A soma das diretas (78) é igual ao total de séries de trabalho, e isso deve valer sempre. Glúteos, antebraço, lombar e o ombro dos supinos são secundários que não contam.
 
-### Exercícios das rotinas e músculos (do Hevy)
-
-| Exercício | template_id | Primário | Secundários |
-|---|---|---|---|
-| Lat Pulldown (Machine) | 473CF5B8 | lats | upper_back, biceps, forearms |
-| Chest Supported T Bar Row | 6A8D3193 | upper_back | lats, biceps, forearms |
-| Seated Incline Curl (Dumbbell) | 8BAB2735 | biceps | (nenhum) |
-| Single Arm Cable Row | D0C4A899 | upper_back | lats, biceps, forearms |
-| Reverse Curl (Cable) | 9F48F858 | biceps | forearms |
-| Behind the Back Wrist Curl (Barbell) | DDB29047 | forearms | (nenhum) |
-| Crunch (Machine) | EB43ADD4 | abdominals | (nenhum) |
-| Shoulder Press (Dumbbell) | 878CD1D0 | shoulders | triceps |
-| Elevação Lateral (Halter) 1 (custom) | 9d23d3d9-7315-43ca-bd83-ddc83fab7185 | shoulders | (nenhum) |
-| Chest Fly (Machine) | 78683336 | chest | (nenhum) |
-| Lateral Raise (Cable) | BE289E45 | shoulders | (nenhum) |
-| Overhead Triceps Extension (Cable) | B5EFBF9C | triceps | (nenhum) |
-| Triceps Pushdown | 93A552C6 | triceps | (nenhum) |
-| Leg Extension (Machine) | 75A4F6C4 | quadriceps | (nenhum) |
-| Straight Leg Deadlift (stiff) | 2A48E443 | hamstrings | glutes, lower_back, upper_back, lats, ... |
-| Lying Leg Curl (Machine) | B8127AD1 | hamstrings | calves |
-| Standing Calf Raise (Machine) | E05C2C38 | calves | (nenhum) |
-| Hammer Curl (Cable) | 36E8F14E | biceps | forearms |
-| Remada Iso-Lateral (Máquina) (custom) | b2ca365b-1abf-4e13-923c-38ae30f557c6 | upper_back | lats, biceps, forearms |
-| Rear Delt Reverse Fly (Machine) | D8281C62 | shoulders | upper_back |
-| Preacher Curl (Machine) | 1E9A6B8E | biceps | (nenhum) |
-| Supino Inclinado Halter (custom) | 3edf9228-8d10-4293-b44b-99f19e9a8d1d | chest | triceps, shoulders |
+O catálogo de exercícios das rotinas fictícias (com os músculos primário e secundários) está em `SampleData`.
 
 ## 3. Estado atual
 
@@ -110,7 +84,7 @@ A soma das diretas (76) é igual ao total de séries de trabalho, e isso deve va
 | `ajustes_manuais` | Músculos que recebem indireta e agrupamento de músculos | Usuário (o script cria com os valores iniciais) |
 | `faixa_alvo` | Faixa-alvo de séries diretas por semana, por músculo | Usuário (o script cria com valores iniciais) |
 | `niveis_volume` | Níveis baixo (1–9), moderado (10–20) e alto (21+) | Usuário (o script cria com valores iniciais) |
-| `fases` | Tabela de fases (cutting, bulking) para o marcador nos gráficos | Usuário (o script cria com a fase atual) |
+| `fases` | Tabela de fases (cutting, bulking) para o marcador nos gráficos | Usuário (o script cria só o cabeçalho) |
 | `config` | Parâmetros simples (`semanas_estagnacao`, `treinos_por_semana`) | Usuário (o script cria com valores iniciais e acrescenta chaves novas que faltarem) |
 | `volume_semanal` | Diretas e indiretas por músculo e por semana (executado) | Script (sempre reescrita) |
 | `volume_rotinas` | Diretas e indiretas por músculo, por rotina e total (planejado) | Script (sempre reescrita) |
@@ -122,7 +96,7 @@ Colunas:
 - **`ajustes_manuais`:** `tipo`, `musculo`, `grupo`. Vira `VolumeRules` no código. Linhas `indireta | biceps` e `indireta | triceps` dizem quais músculos recebem indireta; linhas `agrupamento | lats | back` e `agrupamento | upper_back | back` juntam músculos.
 - **`faixa_alvo`:** `musculo`, `min`, `max` (séries diretas por semana). Valores iniciais: 10–20 para tudo, exceto peito em 1–9 (baixo volume proposital). Aviso: glúteo e lombar não têm exercício direto nas rotinas atuais; o glúteo foi incluído com 10–20 e aparecerá "abaixo" até o usuário decidir remover a linha.
 - **`niveis_volume`:** `nivel`, `min`, `max` (max vazio = sem teto). Baixo 1–9, moderado 10–20, alto 21+ (definido pelo usuário em 24/10/2026). A classificação usa as séries **diretas**.
-- **`fases`:** `fase`, `inicio`, `fim`, com a primeira linha `cutting | 2026-09-14 | (vazio)`. Só o dashboard lê.
+- **`fases`:** `fase`, `inicio`, `fim` (fim vazio = fase em andamento). Uma planilha nova começa só com o cabeçalho; o usuário preenche. Só o dashboard lê.
 - **`config`:** `chave`, `valor`. `semanas_estagnacao = 3` (o plano diz 3 ou 4) e `treinos_por_semana = 5` (a meta que define uma semana "completa"; 5 porque há 5 rotinas).
 - As faixas ficaram em abas separadas (e não numa só `config`) para cada uma ser uma tabela limpa para o Looker Studio.
 
@@ -130,7 +104,9 @@ As abas `volume_*` nunca devem ser editadas à mão, porque o script as sobrescr
 
 **`estado_sync` (decidido e implementado em 24/10/2026):** guarda a data da última sincronização (`chave | valor` e a linha `ultima_sync | 2026-10-24T22:00:00Z`). O GitHub Actions não guarda estado entre execuções, então essa data fica na própria planilha. Foi preferido a um arquivo no repositório, que exigiria um commit do workflow a cada hora.
 
-## 5. Execução no GitHub Actions
+## 5. Execução no GitHub Actions (plano original, substituído)
+
+> **Substituído em 24/10/2026.** Como os dados reais ficam só no computador do usuário, não existe sincronização agendada no GitHub nem segredos no repositório. O workflow `.github/workflows/ci.yml` só testa e publica o site de exemplo. O texto abaixo é o plano antigo, mantido como registro.
 
 - Workflow em `.github/workflows/sync.yml`:
   - `schedule` a cada 1 hora (`cron: '0 * * * *'`). O agendamento do GitHub pode atrasar.
@@ -178,7 +154,7 @@ O usuário liberou o projeto inteiro (inclusive commits e front end) e decidiu:
 
 Arquitetura nova: Hevy API → Java (sincronização e cálculo) → Google Sheets (séries brutas, configurações editáveis e estado) + arquivo de dados do dashboard → site estático publicado no GitHub Pages pelo GitHub Actions.
 
-**Privacidade (repositório e site públicos):** dados reais de treino nunca entram em commit. O arquivo de dados do site é gerado pelo Actions e publicado como artefato do Pages, fora do histórico do Git. Publicar os treinos reais num site público expõe datas, exercícios e cargas, então isso exige confirmação do usuário antes de ligar. O site deve funcionar também com dados de exemplo, para servir de portfólio. As fixtures de `src/test/resources/fixtures/` já mostram as rotinas atuais.
+**Privacidade (repositório e site públicos):** dados reais de treino nunca entram em commit, nem em documento, teste ou captura de tela. O site publicado usa só os dados de exemplo (decisão do usuário em 24/10/2026); os reais ficam no computador dele. Os testes usam rotinas fictícias.
 
 **Decidido: a planilha é o armazenamento.** A sincronização incremental só traz o que mudou, então o histórico completo vem de reler a aba `series_treinos` com valores sem formatação (datas como número de série). As métricas recebem `SetRecord`s e não sabem de onde eles vêm. Para a duração média dos treinos, a aba ganhou a coluna `duracao_min`.
 

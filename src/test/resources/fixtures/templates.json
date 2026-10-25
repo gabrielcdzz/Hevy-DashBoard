@@ -1,279 +1,127 @@
-[
-    {
-        "id":  "DDB29047",
-        "title":  "Behind the Back Wrist Curl (Barbell)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "forearms",
-        "secondary_muscle_groups":  [
-
-                                    ],
-        "equipment":  "barbell",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/63651201-EZ-Barbell-Standing-Back-Wrist-Curl_Forearms_thumbnail_@3x.jpg"
-    },
-    {
-        "id":  "78683336",
-        "title":  "Chest Fly (Machine)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "chest",
-        "secondary_muscle_groups":  [
-
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/05961201-Lever-Seated-Fly_Chest_thumbnail@3x.jpg"
-    },
-    {
-        "id":  "6A8D3193",
-        "title":  "Chest Supported T Bar Row",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "upper_back",
-        "secondary_muscle_groups":  [
-                                        "lats",
-                                        "biceps",
-                                        "forearms"
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/11941201-Lever-Lying-T-bar-Row_Back_thumbnail_@3x.jpg"
-    },
-    {
-        "id":  "EB43ADD4",
-        "title":  "Crunch (Machine)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "abdominals",
-        "secondary_muscle_groups":  [
-
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/05951201-Lever-Seated-Crunch-(chest-pad)_thumbnail@3x.jpg"
-    },
-    {
-        "id":  "9d23d3d9-7315-43ca-bd83-ddc83fab7185",
-        "title":  "Elevação Lateral (Halter) 1",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "shoulders",
-        "secondary_muscle_groups":  [
-
-                                    ],
-        "equipment":  "dumbbell",
-        "is_custom":  true,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/03341201-Dumbbell-Lateral-Raise_shoulder_thumbnail@3x.jpg"
-    },
-    {
-        "id":  "36E8F14E",
-        "title":  "Hammer Curl (Cable)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "biceps",
-        "secondary_muscle_groups":  [
-                                        "forearms"
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/01651201-Cable-Hammer-Curl-(with-rope)-(male)_Forearms_thumbnail_@3x.jpg"
-    },
-    {
-        "id":  "473CF5B8",
-        "title":  "Lat Pulldown (Machine)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "lats",
-        "secondary_muscle_groups":  [
-                                        "upper_back",
-                                        "biceps",
-                                        "forearms"
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/05791201-Lever-Front-Pulldown_Back_thumbnail@3x.jpg"
-    },
-    {
-        "id":  "BE289E45",
-        "title":  "Lateral Raise (Cable)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "shoulders",
-        "secondary_muscle_groups":  [
-
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/01781201-Cable-Lateral-Raise_shoulder_thumbnail@3x.jpg"
-    },
-    {
-        "id":  "75A4F6C4",
-        "title":  "Leg Extension (Machine)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "quadriceps",
-        "secondary_muscle_groups":  [
-
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/05851201-Lever-Leg-Extension_Thighs_thumbnail@3x.jpg"
-    },
-    {
-        "id":  "B8127AD1",
-        "title":  "Lying Leg Curl (Machine)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "hamstrings",
-        "secondary_muscle_groups":  [
-                                        "calves"
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/05861201-Lever-Lying-Leg-Curl_Thighs_thumbnail@3x.jpg"
-    },
-    {
-        "id":  "B5EFBF9C",
-        "title":  "Overhead Triceps Extension (Cable)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "triceps",
-        "secondary_muscle_groups":  [
-
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/01941201-Cable-Overhead-Triceps-Extension-(rope-attachment)_Upper-Arms-FIX_thumbnail_@3x.jpg"
-    },
-    {
-        "id":  "1E9A6B8E",
-        "title":  "Preacher Curl (Machine)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "biceps",
-        "secondary_muscle_groups":  [
-
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/05921201-Lever-Preacher-Curl_Upper-Arms_thumbnail@3x.jpg"
-    },
-    {
-        "id":  "D8281C62",
-        "title":  "Rear Delt Reverse Fly (Machine)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "shoulders",
-        "secondary_muscle_groups":  [
-                                        "upper_back"
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/06021201-Lever-Seated-Reverse-Fly_Shoulders_thumbnail@3x.jpg"
-    },
-    {
-        "id":  "b2ca365b-1abf-4e13-923c-38ae30f557c6",
-        "title":  "Remada Iso-Lateral (Máquina)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "upper_back",
-        "secondary_muscle_groups":  [
-                                        "lats",
-                                        "biceps",
-                                        "forearms"
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  true,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/05881201-Lever-Neutral-Grip-Seated-Row-(plate-loaded)_Back-_thumbnail_@3x.jpg"
-    },
-    {
-        "id":  "9F48F858",
-        "title":  "Reverse Curl (Cable)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "biceps",
-        "secondary_muscle_groups":  [
-                                        "forearms"
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/29541201-Cable-Standing-Reverse-Grip-Curl-(Straight-bar)_Fo_thumbnail_@3x.jpg"
-    },
-    {
-        "id":  "8BAB2735",
-        "title":  "Seated Incline Curl (Dumbbell)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "biceps",
-        "secondary_muscle_groups":  [
-
-                                    ],
-        "equipment":  "dumbbell",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/03151201-Dumbbell-Incline-Biceps-Curl_Upper-Arms_thumbnail@3x.jpg"
-    },
-    {
-        "id":  "878CD1D0",
-        "title":  "Shoulder Press (Dumbbell)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "shoulders",
-        "secondary_muscle_groups":  [
-                                        "triceps"
-                                    ],
-        "equipment":  "dumbbell",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/04051201-Dumbbell-Seated-Shoulder-Press_Shoulders_thumbnail@3x.jpg"
-    },
-    {
-        "id":  "D0C4A899",
-        "title":  "Single Arm Cable Row",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "upper_back",
-        "secondary_muscle_groups":  [
-                                        "lats",
-                                        "biceps",
-                                        "forearms"
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/75641201-Cable-Split-Stance-Single-Arm-Row-(male)_Back_thumbnail_@3x.jpg"
-    },
-    {
-        "id":  "E05C2C38",
-        "title":  "Standing Calf Raise (Machine)",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "calves",
-        "secondary_muscle_groups":  [
-
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/06051201-Lever-Standing-Calf-Raise_Calves_thumbnail@3x.jpg"
-    },
-    {
-        "id":  "2A48E443",
-        "title":  "Straight Leg Deadlift",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "hamstrings",
-        "secondary_muscle_groups":  [
-                                        "glutes",
-                                        "lower_back",
-                                        "upper_back",
-                                        "lats",
-                                        "traps"
-                                    ],
-        "equipment":  "barbell",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/01161201-Barbell-Straight-Leg-Deadlift_Thighs_thumbnail@3x.jpg"
-    },
-    {
-        "id":  "3edf9228-8d10-4293-b44b-99f19e9a8d1d",
-        "title":  "Supino Inclinado Halter",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "chest",
-        "secondary_muscle_groups":  [
-                                        "triceps",
-                                        "shoulders"
-                                    ],
-        "equipment":  "dumbbell",
-        "is_custom":  true,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/03141201-Dumbbell-Incline-Bench-Press_Chest_thumbnail@3x.jpg"
-    },
-    {
-        "id":  "93A552C6",
-        "title":  "Triceps Pushdown",
-        "type":  "weight_reps",
-        "primary_muscle_group":  "triceps",
-        "secondary_muscle_groups":  [
-
-                                    ],
-        "equipment":  "machine",
-        "is_custom":  false,
-        "thumbnail_url":  "https://pump-app.s3.eu-west-2.amazonaws.com/exercise-thumbnails/02011201-Cable-Pushdown_Upper-Arms_thumbnail@3x.jpg"
-    }
-]
+[ {
+  "id" : "S01",
+  "title" : "Supino Reto (Barra)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "chest",
+  "secondary_muscle_groups" : [ "triceps", "shoulders" ],
+  "is_custom" : false
+}, {
+  "id" : "S02",
+  "title" : "Supino Inclinado (Halter)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "chest",
+  "secondary_muscle_groups" : [ "triceps", "shoulders" ],
+  "is_custom" : false
+}, {
+  "id" : "S03",
+  "title" : "Desenvolvimento (Halter)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "shoulders",
+  "secondary_muscle_groups" : [ "triceps" ],
+  "is_custom" : false
+}, {
+  "id" : "S04",
+  "title" : "Elevação Lateral (Cabo)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "shoulders",
+  "secondary_muscle_groups" : [ ],
+  "is_custom" : false
+}, {
+  "id" : "S05",
+  "title" : "Tríceps na Polia",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "triceps",
+  "secondary_muscle_groups" : [ ],
+  "is_custom" : false
+}, {
+  "id" : "S06",
+  "title" : "Tríceps Testa (Barra W)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "triceps",
+  "secondary_muscle_groups" : [ ],
+  "is_custom" : false
+}, {
+  "id" : "S07",
+  "title" : "Puxada Alta (Máquina)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "lats",
+  "secondary_muscle_groups" : [ "upper_back", "biceps", "forearms" ],
+  "is_custom" : false
+}, {
+  "id" : "S08",
+  "title" : "Remada Curvada (Barra)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "upper_back",
+  "secondary_muscle_groups" : [ "lats", "biceps", "forearms" ],
+  "is_custom" : false
+}, {
+  "id" : "S09",
+  "title" : "Remada Unilateral (Cabo)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "upper_back",
+  "secondary_muscle_groups" : [ "lats", "biceps" ],
+  "is_custom" : false
+}, {
+  "id" : "S10",
+  "title" : "Crucifixo Invertido (Máquina)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "shoulders",
+  "secondary_muscle_groups" : [ "upper_back" ],
+  "is_custom" : false
+}, {
+  "id" : "S11",
+  "title" : "Rosca Direta (Barra W)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "biceps",
+  "secondary_muscle_groups" : [ "forearms" ],
+  "is_custom" : false
+}, {
+  "id" : "S12",
+  "title" : "Rosca Martelo (Halter)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "biceps",
+  "secondary_muscle_groups" : [ "forearms" ],
+  "is_custom" : false
+}, {
+  "id" : "S13",
+  "title" : "Agachamento (Smith)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "quadriceps",
+  "secondary_muscle_groups" : [ "glutes", "hamstrings" ],
+  "is_custom" : false
+}, {
+  "id" : "S14",
+  "title" : "Cadeira Extensora (Máquina)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "quadriceps",
+  "secondary_muscle_groups" : [ ],
+  "is_custom" : false
+}, {
+  "id" : "S15",
+  "title" : "Mesa Flexora (Máquina)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "hamstrings",
+  "secondary_muscle_groups" : [ "calves" ],
+  "is_custom" : false
+}, {
+  "id" : "S16",
+  "title" : "Stiff (Barra)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "hamstrings",
+  "secondary_muscle_groups" : [ "glutes", "lower_back" ],
+  "is_custom" : false
+}, {
+  "id" : "S17",
+  "title" : "Panturrilha em Pé (Máquina)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "calves",
+  "secondary_muscle_groups" : [ ],
+  "is_custom" : false
+}, {
+  "id" : "S18",
+  "title" : "Abdominal (Máquina)",
+  "type" : "weight_reps",
+  "primary_muscle_group" : "abdominals",
+  "secondary_muscle_groups" : [ ],
+  "is_custom" : false
+} ]

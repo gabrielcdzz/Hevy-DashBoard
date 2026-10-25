@@ -63,10 +63,11 @@ class SettingsSheetsTest {
     }
 
     @Test
-    void fasesIniciaisTemACuttingEmAndamento() {
+    void umaPlanilhaNovaNaoTemFasesAindaMasTemOCabecalho() {
         List<Phase> fases = configuracao.loadPhases();
 
-        assertEquals(List.of(new Phase("cutting", LocalDate.of(2026, 9, 14), null)), fases);
+        assertEquals(List.of(), fases);
+        assertEquals(List.of(List.of("fase", "inicio", "fim")), planilha.sheets.get("fases"));
     }
 
     @Test
@@ -112,14 +113,6 @@ class SettingsSheetsTest {
         assertEquals("moderado", settings.levels().classify(10));
         assertEquals("moderado", settings.levels().classify(20));
         assertEquals("alto", settings.levels().classify(21));
-    }
-
-    @Test
-    void faseAtualVemPreenchida() {
-        configuracao.load();
-
-        assertEquals(List.of("fase", "inicio", "fim"), planilha.sheets.get("fases").get(0));
-        assertEquals(List.of("cutting", "2026-09-14", ""), planilha.sheets.get("fases").get(1));
     }
 
     @Test
