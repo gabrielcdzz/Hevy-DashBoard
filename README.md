@@ -4,7 +4,7 @@
 ![Java 21](https://img.shields.io/badge/Java-21-informational)
 ![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-green)
 
-Sincroniza os treinos do [Hevy](https://www.hevyapp.com/) com uma planilha do Google Sheets, calcula o volume semanal por grupo muscular (séries **diretas** e **indiretas**) e mostra tudo em um dashboard web: consistência, evolução de carga, recordes pessoais, alerta de estagnação e equilíbrio do treino.
+Sincroniza os treinos do [Hevy](https://www.hevyapp.com/) com uma planilha do Google Sheets, calcula o volume semanal por grupo muscular (séries **diretas** e **indiretas**) compara com o que as suas rotinas planejam e mostra tudo em um dashboard web: consistência, evolução de carga e repetições de cada exercício, recordes pessoais e um alerta dos exercícios que pararam de evoluir.
 
 **Demonstração com dados de exemplo:** https://gabrielcdzz.github.io/Hevy-DashBoard/
 
@@ -15,9 +15,8 @@ Sincroniza os treinos do [Hevy](https://www.hevyapp.com/) com uma planilha do Go
 O Hevy registra cada série, mas não responde às perguntas de quem treina com método:
 
 - Quantas séries de cada músculo eu fiz **nesta semana**, contando também o trabalho indireto (o supino treina o tríceps)?
-- Estou dentro da faixa que planejei para cada músculo?
-- Em quais exercícios eu parei de evoluir?
-- Meu treino está equilibrado entre empurrar e puxar, parte superior e inferior?
+- Estou fazendo, em cada músculo, as séries que as minhas rotinas planejam?
+- Em quais exercícios eu aumentei a carga ou as repetições desde o último treino, e em quais parei de evoluir?
 - Estou sendo consistente, semana após semana?
 
 ## A solução
@@ -26,18 +25,16 @@ Um programa em Java que lê a API do Hevy, guarda cada série em uma planilha (p
 
 - **Sincronização incremental.** A cada execução o programa pede ao Hevy só os treinos que foram salvos, editados ou apagados desde a última vez. Importar um histórico de alguns anos (centenas de treinos) leva cerca de 30 segundos; as execuções seguintes, cerca de 10.
 - **Regras de contagem explícitas e testadas** (veja abaixo), com os números conferidos à mão contra o próprio Hevy.
-- **Configuração na própria planilha:** faixa-alvo por músculo, níveis de volume, fases (cutting, bulking), meta de treinos por semana. Nada disso exige mexer em código.
-- **Dashboard com três abas**, filtros de período, músculo e exercício, modo claro e escuro, versão para celular e uma tabela equivalente para cada gráfico.
+- **A meta de cada músculo vem das próprias rotinas.** O programa soma as séries diretas de cada músculo nas rotinas do Hevy: com 5 séries de peito planejadas, fazer 4 na semana é abaixo, 5 é dentro e 6 é acima. Na semana em andamento aparece "faltam 2", e não um alarme falso. Mudou a rotina no Hevy, a meta muda sozinha.
+- **Evolução em carga e repetições**, sem fórmulas de 1RM: compara a série mais pesada do último treino de cada exercício com a do treino anterior.
+- **Configuração na própria planilha** (o que conta como série indireta e a meta de treinos por semana), sem mexer em código.
+- **Dashboard com duas abas**, filtros de período (4 semanas a todo o histórico, ou um número de semanas à sua escolha), músculo e exercício, modo claro e escuro, versão para celular e uma tabela equivalente para cada gráfico.
 
 ## Capturas
 
-| Exercícios (modo escuro) | Análise |
+| Exercícios (modo escuro) | No celular |
 |---|---|
-| ![Exercícios, modo escuro](docs/img/exercicios-escuro.png) | ![Análise](docs/img/analise.png) |
-
-| No celular |
-|---|
-| <img src="docs/img/celular.png" alt="Dashboard no celular" width="320"> |
+| ![Exercícios, modo escuro](docs/img/exercicios-escuro.png) | <img src="docs/img/celular.png" alt="Dashboard no celular" width="320"> |
 
 Todas as imagens e o site publicado usam **dados de exemplo**: um usuário fictício gerado pelo próprio projeto.
 
@@ -54,7 +51,7 @@ flowchart LR
 
 1. **Busca.** `HevyClient` lê treinos, rotinas e exercícios, com paginação e novas tentativas em caso de erro passageiro.
 2. **Guarda.** `WorkoutSetsTable` grava uma linha por série na aba `series_treinos`. Ao receber um treino editado ou apagado, apaga só as linhas dele e acrescenta as novas. Aplicar os mesmos eventos duas vezes não duplica nada, então uma execução que falha no meio se corrige na seguinte.
-3. **Calcula.** O pacote `service` (sem acesso a rede ou planilha) transforma as séries em volume por músculo, 1RM, recordes, tendência e consistência.
+3. **Calcula.** O pacote `service` (sem acesso a rede ou planilha) transforma as séries em volume por músculo contra o planejado das rotinas, evolução dos exercícios, recordes e consistência.
 4. **Exporta.** `DashboardExporter` junta tudo em um JSON, que o site lê.
 5. **Lembra.** A data da última sincronização fica na aba `estado_sync` da planilha, porque quem agenda a execução não guarda estado entre uma execução e outra.
 
@@ -67,9 +64,10 @@ flowchart LR
 | Série indireta | Conta só para **bíceps e tríceps** (nas puxadas e nos empurrões). Os outros músculos secundários que o Hevy lista são ignorados. |
 | Agrupamento | Dorsal e costas superiores contam juntos como "costas". |
 | Semana | De segunda a domingo, no fuso de Brasília (um treino às 22h de domingo não pode cair na semana seguinte). |
-| 1RM estimado | Fórmula de Epley: `carga × (1 + repetições / 30)`. |
-| Entra em 1RM e recordes | Séries de trabalho com carga e entre 1 e 50 repetições. Acima disso é tratado como erro de digitação. |
-| Estagnação | O melhor 1RM das últimas N semanas não passou o das N semanas anteriores. |
+| Meta semanal de um músculo | As séries diretas dele somadas nas rotinas atuais. Abaixo, dentro (igual) ou acima. Na semana em andamento, menos que a meta aparece como "faltam N". |
+| Evolução de um exercício | A série mais pesada de cada treino. Subiu a carga: "aumentou a carga" (mesmo com menos repetições). Mesma carga e outras repetições: "mudou as repetições". |
+| Entra em recordes e na evolução | Séries de trabalho com carga e entre 1 e 50 repetições. Acima disso é tratado como erro de digitação (mas continua contando no volume). |
+| Sem evolução | Nas últimas N semanas não subiu a carga, nem as repetições com a mesma carga, em relação às N semanas anteriores. |
 | Semana completa | Pelo menos a meta de treinos por semana (configurável). |
 
 O exemplo da regra de séries indiretas: um supino inclinado (peito) com 2 séries de trabalho vale 2 diretas de peito e 2 indiretas de tríceps. As regras ficam em `docs/contexto.md`.
@@ -127,7 +125,7 @@ O site publicado na internet mostra **sempre** o exemplo. Para ver os seus trein
    java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar dashboard
    ```
 
-   O programa sincroniza com o Hevy (só o que mudou desde a última vez) e abre o dashboard com os seus dados. Na primeira execução ele importa o histórico inteiro e cria, na planilha, as abas de configuração com valores iniciais que você pode editar.
+   O programa sincroniza com o Hevy (só o que mudou desde a última vez) e abre o dashboard com os seus dados. Na primeira execução ele importa o histórico inteiro e cria, na planilha, as abas de configuração (`ajustes_manuais` e `config`) com valores iniciais que você pode editar.
 
 Quando atualizar o código, rode `mvn package` de novo para gerar o jar novo.
 
@@ -147,7 +145,7 @@ cd site/tests && npm ci && npm test   # testes de navegador (precisa do Google C
 ```
 
 - **Java:** testes unitários dos cálculos (com as rotinas de um usuário fictício e contas feitas à mão), da leitura da API contra um servidor local falso, da planilha e da sincronização completa contra versões falsas do Hevy e do Sheets. Nenhum teste usa a rede.
-- **Navegador:** o site é aberto no Chrome sem janela, e o teste confere tooltips, a tabela equivalente de cada gráfico, filtros, tema, troca de aba, seleção de exercício e se nada estoura a largura de um celular.
+- **Navegador:** o site é aberto no Chrome sem janela, e o teste confere o layout, tooltips, a tabela equivalente de cada gráfico, os filtros (inclusive o período personalizado e os valores inválidos), tema, troca de aba, seleção de exercício e se nada estoura a largura de um celular.
 - **CI:** o GitHub Actions roda os dois conjuntos, confere que o `site/data/sample.json` está em dia com o código e publica o site.
 
 ## Privacidade e segurança
@@ -162,6 +160,8 @@ cd site/tests && npm ci && npm test   # testes de navegador (precisa do Google C
 - **Datas lidas sem formatação.** O Google Sheets devolve datas no formato do idioma da planilha, e reinterpretá-las pode trocar dia e mês. O programa lê o valor interno (um número de dias) e converte.
 - **Limite de requisições do Google.** Uma sincronização faz mais de 30 chamadas, e três execuções seguidas estouraram a cota por minuto. O cliente agora repete com espera crescente.
 - **Nomes de exercícios.** A API devolve os exercícios padrão em inglês, enquanto os treinos guardam o nome no idioma do app. Só os exercícios personalizados têm o nome atualizado pelo template (e é assim que renomear um exercício junta o histórico dele).
+- **A meta de séries vem das rotinas, não de faixas fixas.** Assim ela acompanha o que você realmente planejou, e o programa não precisa de uma tabela de metas para manter.
+- **Evolução sem 1RM.** Carga e repetições são o que se anota e o que se sente no treino; uma fórmula de estimativa só adicionava um número que não se usa. A comparação é feita com a série mais pesada de cada treino.
 - **Dados reais acham erros que o exemplo não acha.** Séries com 101 repetições (erro de digitação) distorciam os recordes; exercícios recriados com o mesmo nome dividiam o histórico em dois.
 
 ## Código próprio e de terceiros
@@ -184,7 +184,7 @@ O projeto foi desenvolvido com apoio de um assistente de IA (Claude), e o autor 
 ## Próximos passos
 
 - **Versão com contas**, para outras pessoas conectarem o próprio Hevy. A API do Hevy não tem login OAuth: usa uma chave pessoal, então isso pede um servidor, um banco de dados e a guarda criptografada das chaves.
-- RPE médio por exercício, força relativa (1RM dividido pelo peso corporal) e o próximo recorde de cada exercício, que dependem de dados que ainda não estão preenchidos no Hevy.
+- RPE médio por exercício e força relativa (carga dividida pelo peso corporal), que dependem de dados que ainda não estão preenchidos no Hevy.
 
 ## Licença
 

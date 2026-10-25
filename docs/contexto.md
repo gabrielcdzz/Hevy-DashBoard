@@ -2,6 +2,8 @@
 
 > Complementa o `docs/plano.md` (especificação original). Quando os dois divergirem, vale este arquivo.
 > Atualizado em 24/10/2026.
+>
+> **Este arquivo é um registro histórico e foi escrito em etapas.** Várias coisas dele foram superadas por decisões do usuário (Looker Studio, GitHub Actions agendado, faixas-alvo fixas, níveis, fases, 1RM, aba Análise, calendário). A seção **8** no fim lista o que mudou na segunda rodada, e o `CLAUDE.md` descreve o estado atual do código. Em caso de dúvida, vale a seção 8 e depois o `CLAUDE.md`.
 
 O ponto central é **praticidade**: o usuário muda uma série no Hevy (adiciona, remove, edita) e o dashboard se atualiza sozinho, sem digitar nada.
 
@@ -182,3 +184,33 @@ Arquitetura nova: Hevy API → Java (sincronização e cálculo) → Google Shee
 - A API do Hevy devolve os exercícios padrão em inglês e os treinos guardam o nome no idioma do app. Só os exercícios personalizados têm o nome atualizado a partir do template (ver `SetRecords.withCurrentTemplates`).
 - Renomear um exercício personalizado no Hevy não gera evento de treino, então os treinos antigos continuam com o nome velho na planilha. Por isso o nome vem do template de hoje (ver `SetRecords.withCurrentTemplates`): renomear junta o histórico antigo e o novo, e dois templates com o mesmo nome viram um exercício só.
 - Cardio, corpo inteiro e "outros" não são músculos: o site os esconde das listas de volume e do filtro de músculo.
+
+## 8. Segunda rodada de mudanças (24/10/2026)
+
+O usuário pediu várias mudanças de uma vez; foram discutidas e confirmadas antes de executar.
+
+**Saiu do programa (e não volta sem o usuário pedir):**
+
+- Cutting e bulking: marcadores nos gráficos, a aba `fases` e o código.
+- 1RM estimado (fórmula de Epley) em todo o programa, "porque na prática ele não usa esse termo".
+- Níveis baixo/moderado/alto e as faixas-alvo fixas por músculo (abas `niveis_volume` e `faixa_alvo`).
+- A aba **Análise** inteira (frequência por músculo, tonelagem, push/pull, séries por faixa de repetição) e o calendário de treinos da Visão geral. O código morto foi apagado (`Movement`, `OneRepMax`, `TargetRange`, `VolumeLevels`, `Phase`).
+- As abas `fases`, `faixa_alvo` e `niveis_volume` da planilha do usuário **ficam como estão**, sem uso (ele escolheu não apagar).
+
+**A meta semanal passa a ser o volume planejado das rotinas.** Cada músculo tem como meta a soma das séries diretas dele nas rotinas atuais. Exemplo do usuário: 5 séries de peito nas rotinas; 4 na semana é abaixo, 5 é dentro, 6 é acima. Músculos fora das rotinas não têm meta. Na **semana em andamento**, menos que o planejado aparece como "faltam N" (não "abaixo"), para não dar alarme falso na quarta-feira; passar do planejado já aparece como acima. O planejado atual vale para todas as semanas do histórico, mas as antigas foram feitas com outras rotinas, então é só referência.
+
+**Exercícios sem 1RM.** A evolução usa a **série mais pesada** de cada treino (maior carga e, nela, mais repetições). Duas comparações, as duas pedidas pelo usuário:
+
+1. **Último treino contra o anterior do mesmo exercício**: "aumentou a carga" (mostra a carga, ex.: 60 → 62,5 kg), "mesma carga, mudou as repetições" (mostra as repetições, ex.: 10 → 12), "diminuiu a carga" (sugestão aceita) e "sem mudança". A carga tem prioridade: subir a carga com menos repetições é "aumentou a carga".
+2. **Janela de semanas** (as últimas N contra as N anteriores, N = `semanas_estagnacao`): alimenta o alerta "sem evolução". Evoluir = subir a carga, ou as repetições com a mesma carga.
+
+Os "recordes mais recentes" ficam como estavam, só que sem o tipo "maior 1RM". O cartão "Recordes no mês" passa a contar só recordes de carga e de repetições.
+
+**Visão geral e filtros.**
+
+- O filtro de período ganhou "Últimas 4 semanas" e "Personalizado" (o usuário digita o número de semanas, de 1 a 520). As outras opções continuam.
+- Os filtros de Período e Músculo ficam **abaixo dos 5 cartões da semana**, que não dependem deles. Na aba Exercícios eles ficam no topo.
+- A "Variação semanal de volume" também responde ao filtro de músculo (variação das séries diretas dele).
+- O cartão "Séries na semana" mostra também o total planejado ("74 de 78 planejadas", nos dados de exemplo).
+
+**Formato do arquivo de dados** (`DashboardData`): saíram `phases`, `calendar`, `workouts`, `config.targets`, `config.levels` e todo campo de 1RM e de tonelagem. Entraram `planned`, `status` e `changePercent` em cada linha de `volume`, e `lastChange`, `trend` e `sessions` com carga e repetições em cada exercício.

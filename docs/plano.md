@@ -1,6 +1,6 @@
 # Plano do projeto
 
-> Especificação original do projeto. As decisões tomadas depois, o estado atual e as próximas etapas estão em `docs/contexto.md`, que prevalece em caso de conflito.
+> Especificação original do projeto. As decisões tomadas depois, o estado atual e as próximas etapas estão em `docs/contexto.md`, que prevalece em caso de conflito. **Várias coisas deste plano foram removidas por decisão do usuário** (Looker Studio, 1RM, fases cutting/bulking, faixas-alvo fixas, a aba Análise, o calendário de treinos); a lista está na seção 8 do `contexto.md`.
 
 ## 1. Objetivo
 

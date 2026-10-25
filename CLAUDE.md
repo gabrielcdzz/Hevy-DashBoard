@@ -4,36 +4,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Visão geral
 
-Aplicação Java 21 (Maven, sem framework) que lê os treinos do Hevy, calcula as séries diretas e indiretas por grupo muscular na semana, grava tudo no Google Sheets e alimenta um dashboard web próprio (decisão de 24/10/2026; o plano original usava Looker Studio). Vai rodar agendada no GitHub Actions. O projeto também é portfólio do usuário, então testes, README (em português) e organização do código fazem parte do escopo.
+Aplicação Java 21 (Maven, sem framework) que lê os treinos do Hevy, grava as séries no Google Sheets, calcula o volume semanal por músculo contra o que as rotinas planejam, a evolução de cada exercício e a consistência, e mostra tudo em um dashboard web próprio (HTML, CSS e JavaScript puros). É também portfólio do usuário, então testes, README (em português) e organização do código fazem parte do escopo.
 
-Documentação do projeto:
+Documentação:
 
-- `docs/contexto.md`: decisões tomadas, regras de cálculo, **valores esperados para testes**, estrutura da planilha, lógica de sincronização e próximas etapas. Leia antes de começar uma etapa nova.
-- `docs/plano.md`: especificação original (abas e métricas do dashboard). Em caso de conflito, vale o `contexto.md`.
+- `docs/contexto.md`: decisões, regras de cálculo, valores esperados para testes, estrutura da planilha e histórico das mudanças. Leia antes de começar uma etapa nova.
+- `docs/plano.md`: a especificação original. Em caso de conflito, vale o `contexto.md` (várias coisas do plano foram removidas por decisão do usuário).
 
-Estado: tudo funciona de ponta a ponta com os dados reais do usuário (`Main sync` sincroniza o Hevy com a planilha e gera `site/data/dashboard.json`). O CI (`.github/workflows/ci.yml`) roda os testes do Java e do navegador e publica no GitHub Pages **só o site com os dados de exemplo**. Decisão do usuário (24/10/2026): os dados reais ficam só na máquina dele, então **não existe sincronização agendada no GitHub** e o repositório não guarda nenhum segredo. Para acompanhar os treinos, ele roda `sync` no próprio computador. Falta apenas dar `push` e ligar o GitHub Pages (Settings → Pages → Source: GitHub Actions).
+**Estado:** tudo funciona de ponta a ponta com os dados reais do usuário. O CI (`.github/workflows/ci.yml`) roda os testes do Java e do navegador e publica no GitHub Pages **só o site com os dados de exemplo**. Decisão do usuário: os dados reais ficam só na máquina dele, então **não existe sincronização agendada no GitHub** e o repositório não guarda nenhum segredo. Falta apenas dar `push` e ligar o GitHub Pages (Settings → Pages → Source: GitHub Actions).
 
 ## Como trabalhar com o usuário
 
-- Desde 24/10/2026 o usuário liberou o projeto inteiro, inclusive o front end e os commits. Commitar em etapas pequenas, com mensagem em português. **Perguntar antes de** `git push`, de apagar dados na planilha, de criar serviços externos e de publicar dados reais de treino (o repositório é público).
+- O usuário liberou o projeto inteiro, inclusive o front end e os commits. Commitar em etapas, com mensagem em português. **Perguntar antes de** `git push`, de apagar dados na planilha, de criar serviços externos e de publicar dados reais de treino (o repositório é público).
+- **Quando o usuário pedir várias mudanças, não execute de cara:** diga o que entendeu, aponte dúvidas e dê sugestões, e só execute depois que ele concordar. Ele pediu isso explicitamente.
 - Explicar a lógica de cada parte de forma objetiva, passo a passo, com números e exemplos. O usuário precisa saber defender o projeto numa entrevista.
-- Trabalhar em etapas pequenas, uma camada por vez, cada uma terminando com `mvn test` passando.
 - O ambiente é Windows/PowerShell. Comandos entregues ao usuário devem funcionar no PowerShell.
+- **Nada de dados reais do usuário em arquivo do repositório** (código, teste, documento, captura de tela): ele é público. Os números do histórico real ficam na memória local do Claude.
 
 ## Comandos
 
 Não há Maven Wrapper, então use o `mvn` instalado.
 
 ```bash
-mvn test                                               # todos os testes
+mvn test                                               # todos os testes do Java
 mvn test -Dtest=HevyClientTest                         # uma classe
 mvn test -Dtest=HevyJsonTest#leEventoDeTreinoApagado   # um método
 mvn package                                            # gera target/hevy-dashboard-0.1.0-SNAPSHOT.jar (fat jar via shade)
 java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar dashboard # o do dia a dia: sync + abre o site com os dados reais (no Windows: clique duplo em abrir-dashboard.bat)
 java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar serve     # só abre o site (dados reais se site/data/dashboard.json existir, senão o exemplo)
-java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar sync     # Hevy -> planilha -> site/data/dashboard.json (precisa de HEVY_API_KEY, GOOGLE_APPLICATION_CREDENTIALS e SPREADSHEET_ID)
-java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar sample   # regenera site/data/sample.json (dados fictícios, vão para o Git)
-java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar check    # só testa a conexão com o Hevy e a planilha
+java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar sync      # Hevy -> planilha -> site/data/dashboard.json (precisa de HEVY_API_KEY, GOOGLE_APPLICATION_CREDENTIALS e SPREADSHEET_ID)
+java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar sample    # regenera site/data/sample.json (dados fictícios, vão para o Git)
+java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar check     # só testa a conexão com o Hevy e a planilha
+cd site/tests && npm ci && npm test                    # testes de navegador (precisa do Google Chrome; CHROME_PATH se não estiver no lugar padrão)
 ```
 
 ## Convenções de código
@@ -41,67 +43,62 @@ java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar check    # só testa a conex�
 - Nomes de classes, métodos e variáveis em inglês. Comentários, Javadoc, mensagens de erro e nomes de testes em português (ex.: `leEventoDeTreinoApagado`).
 - Modelos são `record` imutáveis. Os construtores compactos trocam listas nulas por `List.of()` e fazem cópia com `List.copyOf`.
 - Poucas dependências: HTTP com `java.net.http.HttpClient`, sem biblioteca extra.
-- Testes sem rede: JSON de exemplo em text blocks ou em `src/test/resources/`, ou servidor local com `com.sun.net.httpserver.HttpServer`.
+- Testes sem rede: JSON de exemplo em text blocks ou em `src/test/resources/`, servidor local com `com.sun.net.httpserver.HttpServer`, ou as versões falsas (`InMemorySheets`, `FakeHevy`).
+- Acesso externo atrás de interface (`HevySource`, `SheetsGateway`), para o resto do código e os testes não dependerem da rede.
 
-## Arquitetura
+## Arquitetura (`src/main/java/com/gabriel/hevydashboard/`)
 
-Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I/O**, para ser testável isoladamente) e `sheets` (Google Sheets, via conta de serviço). Em `sheets`, já existem a conexão, a leitura/escrita de abas, o `SyncState` e a aba `series_treinos` (`WorkoutSetsTable`). Faltam `series_rotinas` e as abas de volume.
+**`client/`** (API do Hevy)
+- `HevyClient`: cliente somente leitura de `https://api.hevyapp.com/v1`. A chave vai no header `api-key` e nunca aparece em log nem em mensagem de erro. Toda listagem passa por `fetchAll` (paginação até `page_count`); `get` tenta até 3 vezes em falha de rede, 429 ou 5xx; o resto vira `HevyApiException` com o status HTTP (`-1` para rede). Implementa `HevySource`.
+- `HevyJson`: o único `ObjectMapper` (snake_case do Hevy para camelCase dos records, `java.time`, ignora campos novos).
+- Sincronização incremental: `/workouts/events?since=` devolve `updated` (com o treino completo) e `deleted` (só o id). `Instant.EPOCH` importa tudo. O endpoint não cobre rotinas, que são relidas inteiras.
 
-- `sheets/SettingsSheets.load()`: cria e lê as abas que o usuário edita (`ajustes_manuais`, `faixa_alvo`, `niveis_volume`, `fases`, `config`) e devolve um `service.Settings`. **Só preenche uma aba com os valores iniciais se ela estiver totalmente vazia**; depois o conteúdo é do usuário e nunca é sobrescrito (cabeçalho sozinho conta como escolha do usuário). Erros de preenchimento dizem a aba e a linha. A aba `fases` só é lida pelo dashboard.
-- Níveis de volume semanal (séries diretas): baixo 1–9, moderado 10–20, alto 21+, e "nenhum" para 0 (`VolumeLevels.classify`). `TargetRange.statusOf` diz se um valor está abaixo, dentro ou acima da faixa-alvo.
+**`service/`** (cálculo puro, **sem I/O**)
+- `SetRecord`: uma série já com data local, semana e músculos; é a unidade de dados das métricas, venha de `SetRecords.of(Workout, ...)` ou da planilha. `countsForStrength()` = série de trabalho com carga e 1 a 50 repetições (acima disso é erro de digitação, `MAX_PLAUSIBLE_REPS`): é a única que entra em recordes e na evolução; o volume conta todas as séries de trabalho.
+- `SetRecords.withCurrentTemplates`: atualiza os músculos com o template de hoje e o **nome só nos exercícios personalizados** (`isCustom`): a API devolve os padrão em inglês ("Lat Pulldown (Machine)") e os treinos guardam o nome no idioma do app, que é o certo. Renomear um template não gera evento de treino, então sem isso o histórico antigo ficaria com o nome velho.
+- `VolumeRules.contribution`: a única implementação da regra "direta no primário, indireta só nos permitidos". `VolumeCalculator` (rotinas) e `VolumeReport` (semanas) a usam; não duplique.
+- `VolumeCalculator`: volume de uma lista de exercícios (usado nas rotinas, para o **planejado**). Template desconhecido lança erro em vez de contar errado.
+- `VolumeReport.weekly(séries, settings, planejado, hoje)`: uma linha por semana e músculo, sem buracos (até a semana de hoje, mesmo sem treino; músculos planejados aparecem com zero). Cada linha traz `planned`, `status` (`PlanStatus`) e a variação das diretas contra a semana anterior.
+- `PlanStatus.of(feitas, planejadas, semanaEmAndamento)`: acima se passou; dentro se igual; abaixo se menos; **na semana em andamento, menos que o planejado é `REMAINING` ("faltam N"), não abaixo**.
+- `ActivityReport.build`: por semana, treinos, séries, duração média e variação; mais a `Consistency` (semana completa = treinos ≥ `Settings.workoutsPerWeek`; a semana em andamento ainda incompleta não quebra a sequência).
+- `ExerciseReport.build(séries, hoje, semanasDeEstagnação)`: **tudo em carga e repetições, sem 1RM**. Séries do mesmo template **ou** do mesmo nome são um exercício só. Cada treino vira a **série mais pesada** (maior carga e, nela, mais repetições). Traz: os treinos, os recordes (maior carga e mais repetições, com a **primeira** data), os recordes batidos (`PrEvent`; a primeira sessão só estabelece a base), a comparação do **último treino contra o anterior** (`Change`: `LOAD_UP`, `LOAD_DOWN`, `REPS_UP`, `REPS_DOWN`, `SAME`; a carga tem prioridade) e a tendência por **janela de semanas** (série mais pesada das últimas N semanas contra a das N anteriores: `PROGRESSING`, `STAGNANT`, `INACTIVE`, `NO_BASELINE`).
+- `Settings`: `VolumeRules`, semanas de estagnação e meta de treinos por semana. **A meta de séries de cada músculo não está aqui: é o volume planejado das rotinas.**
 
-- `sheets/SheetsGateway`: a interface do que o código precisa da planilha (`ensureSheets`, `readRows`, `readColumn`, `replaceRows`, `appendRows`, `deleteRows`). O resto do código depende dela, nunca do `SheetsClient`, para os testes usarem `InMemorySheets` (em `src/test`) e não chamarem o Google. A escrita tem dois modos: `RAW` (texto exato, para dados de controle) e `TYPED` (o Sheets interpreta datas e números, para as abas que o Looker Studio vai ler).
-- **Nunca ler de volta e regravar uma aba `TYPED`.** O Sheets devolve datas formatadas conforme o idioma da planilha ("24/10/2026"), e regravar isso pode trocar dia e mês. Por isso as atualizações são incrementais: `readColumn` só do `workout_id`, `deleteRows` nas linhas afetadas e `appendRows` com as novas. As datas ficam como datas de verdade (confirmado: o Sheets guarda o número de série).
-- `sheets/WorkoutSetsTable`: aba `series_treinos`, uma linha por série, com os dados brutos (todos os secundários do Hevy, aquecimento marcado em `valida`). `applyEvents` recebe os eventos de `/workouts/events` e, para cada treino, vale o evento mais recente (`updatedAt` ou `deletedAt`), seja qual for a ordem em que a API os devolve. É idempotente: aplicar os mesmos eventos duas vezes não duplica linhas. Template desconhecido lança erro, em vez de gravar a linha sem músculo. A aba tem 14 colunas (a última é `duracao_min`, a duração do treino repetida em cada série); se o cabeçalho for de uma versão antiga, `applyEvents` e `readAll` param com um erro que explica como recomeçar (esvaziar a aba e o valor de `estado_sync`).
-- **A planilha é o armazenamento, e as métricas leem dela.** A sincronização incremental só traz o que mudou, então o histórico completo vem de `WorkoutSetsTable.readAll()`, que usa `SheetsGateway.readTypedRows` (valores sem formatação: data = número de dias desde 30/12/1899, tratado em `fromRow`). Nunca interprete texto formatado de data.
-- `sheets/SyncState`: guarda a data da última sincronização na aba `estado_sync`. Aba vazia = nunca sincronizou = importar o histórico inteiro. Ao testar contra a planilha real, **deixe a aba só com o cabeçalho** (`chave | valor`), senão a primeira sincronização pula o histórico.
+**`sheets/`**
+- `SheetsGateway` (interface) e `SheetsClient`: `ensureSheets`, `readRows`, `readTypedRows`, `readFirstRow`, `readColumn`, `replaceRows`, `appendRows`, `deleteRows`. A escrita tem `RAW` (texto exato) e `TYPED` (o Sheets interpreta datas e números). `SheetsClient` repete chamadas com falha passageira (429, 5xx, rede) com esperas de 2, 5, 15 e 40 s (`Retry`): o Google limita as requisições por minuto e uma execução faz mais de 30 chamadas.
+- **Nunca ler de volta e regravar uma aba `TYPED`**: o Sheets devolve datas formatadas conforme o idioma da planilha, e regravar pode trocar dia e mês. As atualizações são incrementais (`readColumn` do `workout_id`, `deleteRows`, `appendRows`). Para interpretar, use `readTypedRows` (data = dias desde 30/12/1899; `Cells`).
+- `WorkoutSetsTable`: aba `series_treinos`, uma linha por série (14 colunas; a última é `duracao_min`). `applyEvents` vale o evento mais recente de cada treino, qualquer que seja a ordem, e é idempotente. `readAll()` relê tudo. Cabeçalho antigo para com um erro que explica como recomeçar.
+- `SyncState`: a data da última sincronização na aba `estado_sync`. Vazia = importar tudo.
+- `SettingsSheets.load()`: cria e lê `ajustes_manuais` (músculos com indireta e agrupamento) e `config` (`semanas_estagnacao`, `treinos_por_semana`). **Só preenche uma aba totalmente vazia**; depois o conteúdo é do usuário. Chaves novas de `config` são acrescentadas no fim. As abas antigas `faixa_alvo`, `niveis_volume` e `fases` não são lidas nem apagadas.
 
-- `sheets/SheetsClient`: autentica com `ServiceAccountCredentials` (do `google-auth-library`, que já vem com o `google-api-client`). Lê o caminho do JSON em `GOOGLE_APPLICATION_CREDENTIALS` e o ID em `SPREADSHEET_ID`. Toda chamada passa por `execute`, que transforma 403 e 404 em `SheetsException` com uma mensagem que diz o que corrigir. No GitHub Actions, o secret com o JSON será gravado num arquivo temporário apontado pela mesma variável.
+**`sync/`**: `SyncService.run(arquivo)` lê a data da última sincronização, pede ao Hevy os eventos desde então, aplica em `series_treinos`, **só então** grava a nova data, relê a aba, carrega as configurações, calcula o planejado das rotinas e grava o arquivo do dashboard. Se algo falhar antes de gravar a data, a próxima execução refaz tudo sem duplicar nada. O instante é anotado **antes** de buscar, para não esquecer um treino salvo durante a execução.
 
-- `service/VolumeCalculator`: recebe templates e `VolumeRules` (músculos com indireta e agrupamento) no construtor. `volumeOf(exercícios)` devolve `Map<músculo, MuscleVolume>`, e `weeklyVolume(treinos, zona)` agrupa por segunda-feira (`Weeks.startOf`). Template desconhecido lança `IllegalArgumentException` em vez de contar errado.
-- `service/SetRecord`: uma série já com data local, semana e músculos. É a unidade de dados das métricas, venha de `SetRecords.of(Workout, ...)` ou da planilha. As métricas novas devem receber `Collection<SetRecord>` e `Settings`, sem saber de onde vêm.
-- `service/VolumeRules.contribution`: a única implementação da regra "direta no primário, indireta só nos permitidos". Tanto `VolumeCalculator` (rotinas) quanto `VolumeReport` (semanas) a usam; não duplique a regra.
-- `service/VolumeReport.weekly`: uma linha por semana e músculo, sem buracos (semanas sem treino aparecem com zero, e músculos com faixa-alvo aparecem com zero). Traz o nível e a posição na faixa. `MuscleNames.label` traduz os nomes. `sessions` é a frequência: quantos dias da semana o músculo recebeu série direta.
-- `service/ActivityReport.build(séries, settings, hoje)`: por semana (sem buracos até a semana de hoje, marcada `inProgress`), treinos, séries, tonelagem, duração média, séries por faixa de repetição (1–5, 6–12, 13+), séries diretas por `Movement` (push, pull, pernas, core; "superior" = push + pull, "inferior" = pernas) e variação percentual das séries contra a semana anterior (null se a anterior teve zero). Também devolve o resumo por treino, o calendário de dias treinados e a `Consistency`: semana completa = treinos ≥ `Settings.workoutsPerWeek`, e a sequência atual não é quebrada pela semana em andamento que ainda está incompleta.
-- `service/ExerciseReport.build(séries, hoje, semanasDeEstagnação)`: por exercício (séries do mesmo template **ou** do mesmo nome contam como um exercício só, porque o usuário às vezes recria o template; nome e template vêm da série mais recente), os pontos por dia de treino (maior carga e melhor 1RM de Epley), os recordes (carga, repetições e 1RM, com a **primeira** data em que foram alcançados), a lista de recordes batidos (`PrEvent`, base para "PRs do mês"; a primeira sessão só estabelece a base) e a tendência. Tendência: melhor 1RM das últimas N semanas contra o das N anteriores, com `PROGRESSING`, `STAGNANT` (treinou e não melhorou), `INACTIVE` (não treinou, não é estagnação) e `NO_BASELINE`. A semana atual conta, mesmo incompleta. O relatório cobre todos os exercícios; filtrar pelos das rotinas é papel de quem exporta.
-- `src/test/resources/fixtures/`: as 5 rotinas **fictícias** (PUSH, PUSH 2, PULL, PULL 2, LEGS) e os 18 templates delas, no formato da API do Hevy, geradas a partir de `SampleData`. São a base do teste que confere o volume planejado com uma conta feita à mão (ver `docs/contexto.md`). Nunca coloque rotinas ou treinos reais aqui: o repositório é público.
+**`export/`**: `DashboardData` é **o contrato** com o site (`weeks`, `volume`, `plannedVolume`, `exercises`, `prEvents`, `consistency`, `config`, `muscleLabels`). Mudou um campo, mude o JavaScript junto. `DashboardExporter` monta e grava o JSON (1 casa decimal, enums em minúsculas, nulos omitidos). `SampleData` gera um usuário **fictício** e determinístico (60 semanas) pelo mesmo caminho dos dados reais; depois de mudar `DashboardData` ou `SampleData`, rode `sample` e commite `site/data/sample.json`.
 
-- `client/HevyClient`: cliente HTTP somente leitura para `https://api.hevyapp.com/v1`.
-  - A chave vai no header `api-key` e nunca deve aparecer em log nem em mensagem de exceção.
-  - Toda listagem passa por `fetchAll`, que percorre as páginas até `page_count`. Os tamanhos de página (`*_PAGE_SIZE`) seguem os limites da API: 10 na maioria, 100 em templates.
-  - `get` tenta até 3 vezes, com espera crescente, em falha de rede, 429 ou 5xx. Os demais erros viram `HevyApiException` com o status HTTP (`-1` para falha de rede).
-  - O construtor de 3 argumentos (`apiKey`, `baseUrl`, `HttpClient`) existe para os testes apontarem para um servidor local.
-- `client/HevyJson`: o único `ObjectMapper`. Converte o snake_case do Hevy para os nomes camelCase dos records, suporta `java.time` e ignora campos desconhecidos. Reutilize esse mapper.
-- Sincronização incremental: `/workouts/events?since=` devolve eventos `updated` (com o `Workout` completo) e `deleted` (só `id` e `deleted_at`). Use `Instant.EPOCH` para importar o histórico inteiro. O endpoint não cobre rotinas, então as rotinas são relidas inteiras a cada execução.
+**`web/`**: `SiteServer` serve a pasta `site/` **só em localhost** (o site pode mostrar treinos reais) e não entrega nada fora dela.
 
-## Regras de cálculo (decididas, não mudar sem o usuário pedir)
+## Regras de cálculo (decididas pelo usuário, não mudar sem ele pedir)
 
-- Série válida é toda série que não seja `warmup`. Séries `failure` e `dropset` contam.
-- Série direta conta para o `primaryMuscleGroup` do template. Série indireta conta, em campo separado, **só para bíceps e tríceps**. Os outros secundários do Hevy são ignorados.
-- `lats` e `upper_back` são contados juntos como `back`. Essas regras ficam em `VolumeRules.DEFAULT` e depois vão ser lidas da aba `ajustes_manuais`.
-- A semana vai de segunda a domingo, no fuso **America/Sao_Paulo**. O Hevy grava em UTC, e um treino às 22h de domingo não pode cair na semana seguinte.
-- Séries com carga 0, sem carga, sem repetições ou com mais de 50 repetições (`SetRecord.MAX_PLAUSIBLE_REPS`, erro de digitação) contam no volume, mas são ignoradas na tonelagem, no 1RM e nos PRs. Use sempre `SetRecord.countsForStrength()`.
-- 1RM estimado pela fórmula de Epley: `carga × (1 + reps / 30)`.
-- A soma das diretas é sempre igual ao total de séries válidas. Os valores esperados das 5 rotinas estão em `docs/contexto.md` e devem virar teste.
-- O volume baixo de peito é proposital. Não tratar como alerta nem sugerir mudança.
+- Série válida é toda série que não seja `warmup`. `failure` e `dropset` contam.
+- Direta conta para o `primaryMuscleGroup` do template. Indireta, em campo separado, **só para bíceps e tríceps**. Dorsal e costas superiores contam juntos como `back`.
+- A semana vai de segunda a domingo, no fuso **America/Sao_Paulo**.
+- **A meta semanal de cada músculo é o volume planejado das rotinas atuais** (séries diretas somadas em todas as rotinas, cada uma uma vez): abaixo, dentro (igual) ou acima. Músculos fora das rotinas não têm meta. O planejado vale para todas as semanas do histórico, mas as antigas foram feitas com outras rotinas, então é só referência.
+- **Evolução de um exercício = série mais pesada de cada treino.** Subiu a carga: "aumentou a carga" (mesmo com menos repetições). Mesma carga e repetições diferentes: "mudou as repetições". Estagnação: nas últimas N semanas não subiu carga nem repetições (com a mesma carga) em relação às N anteriores; exercício não treinado nas últimas N semanas é "inativo", não estagnado.
+- Séries com carga 0, sem carga, sem repetições ou com mais de 50 repetições entram no volume, mas **não** em recordes nem na evolução.
+- A soma das diretas é sempre igual ao total de séries válidas.
+- **Foi removido por decisão do usuário e não deve voltar sem ele pedir:** 1RM estimado (Epley), fases cutting/bulking, níveis baixo/moderado/alto, faixas-alvo fixas por músculo, tonelagem, push/pull, séries por faixa de repetição, frequência por músculo, calendário de treinos e a aba Análise.
 
-## Sincronização (`sync/`)
+## Dashboard web (`site/`)
 
-- `sync/SyncService.run(arquivo)`: lê a data da última sincronização (`estado_sync`), pede ao Hevy os eventos desde então (`Instant.EPOCH` na primeira vez), aplica na aba `series_treinos`, **só então** grava a nova data, relê a aba inteira, carrega as configurações, calcula o volume planejado das rotinas e grava o arquivo do dashboard. Se qualquer passo falhar antes de gravar a data, a próxima execução refaz tudo, e como aplicar os mesmos eventos duas vezes não duplica nada, a planilha se corrige sozinha. O instante é anotado **antes** de buscar, para um treino salvo durante a execução não ser esquecido.
-- `client/HevySource` é a interface que o `SyncService` usa (o `HevyClient` a implementa); os testes usam `FakeHevy`, que responde só com os eventos posteriores ao instante pedido, como a API.
-- `SheetsClient` repete chamadas com falha passageira (429, 5xx, rede) com esperas de 2, 5, 15 e 40 s (`Retry`). O Google limita as requisições por minuto e uma execução faz mais de 30 chamadas; três execuções seguidas já estouraram o limite.
-- **Nomes de exercícios:** a API devolve os exercícios padrão em inglês ("Lat Pulldown (Machine)"), mas os treinos guardam o nome no idioma do app ("Puxada Alta (Máquina)"). Por isso `SetRecords.withCurrentTemplates` só troca o nome pelo do template nos exercícios **personalizados** (`isCustom`), que o usuário pode renomear; nos padrão mantém o gravado. Os músculos vêm sempre do template de hoje. Renomear um template não gera evento de treino, então sem isso o histórico antigo ficaria com o nome velho.
-
-## Dashboard web (`site/`) e exportação (`export/`)
-
-- `export/DashboardData` é **o contrato** entre o Java e o site: um registro com todas as seções (`weeks`, `volume`, `exercises`, `prEvents`, `calendar`, `plannedVolume`, `phases`, `config`...). Mudou um campo ali, mude o JavaScript junto. `DashboardExporter.build(Input)` monta o registro a partir de `SetRecord`s e `Settings` (arredonda para 1 casa, usa `snake`/minúsculas nos enums, omite campos nulos); `toJson`/`write` gravam o arquivo.
-- `export/SampleData` gera um usuário **fictício** e determinístico (60 semanas, progressão, platôs, deload, semana parada) e o passa pelo mesmo caminho dos dados reais. `java -jar target/*.jar sample` grava `site/data/sample.json`, que **vai para o Git**. Depois de mudar `DashboardData` ou `SampleData`, regenere e commite o `sample.json`.
-- O site é HTML, CSS e JavaScript puros (módulos ES), sem build. `site/vendor/chart.umd.js` é o Chart.js 4.4.7 copiado para o repositório (MIT, licença em `site/vendor/`).
-- `site/js/data.js` tenta `data/dashboard.json` (dados reais, **no `.gitignore`**, nunca commitar) e, se não existir, usa `data/sample.json`. O 404 do primeiro no console é esperado.
-- Regras do site: texto vindo dos dados entra no DOM por `textContent`/nós de texto, nunca `innerHTML`; todo gráfico tem a tabela equivalente (`card({ table })`, botão "Ver tabela"); status (abaixo, dentro, acima, progredindo, estagnado) sempre com ícone e texto; um eixo por gráfico; cores só pelas variáveis CSS (`--s1`, `--band`, `--heat-*`...), que têm valores para claro e escuro; os filtros (período, músculo, exercício) ficam em uma linha só e valem para todos os cartões; um cartão só desenha depois de estar no documento (`card.render()`).
-- Para ver o site: `java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar serve` (ou `dashboard`, que sincroniza antes; no Windows, o clique duplo em `abrir-dashboard.bat`). O `SiteServer` (pacote `web`) só escuta em localhost, porque o site pode estar mostrando treinos reais, e não entrega nada fora da pasta `site/`; o `file://` não funciona porque o navegador bloqueia o carregamento do JSON. Os testes de navegador ficam em `site/tests` (`npm ci && npm test`, precisa do Google Chrome; `CHROME_PATH` aponta para ele se não estiver no lugar padrão). Eles sempre usam os dados de exemplo: o servidor de teste esconde `data/dashboard.json`. Além dos testes, confira sempre as capturas de tela (claro, escuro, 390 px): o código sozinho não mostra colisões de rótulos. O workflow publica uma **lista explícita de arquivos** (site + `sample.json`); nunca troque isso por copiar a pasta inteira.
+- HTML, CSS e JavaScript puros (módulos ES), sem build. `site/vendor/chart.umd.js` é o Chart.js 4.4.7 copiado para o repositório (MIT).
+- Duas abas: **Visão geral** (5 cartões da semana, que não mudam com filtros; os filtros de Período e Músculo logo abaixo; volume por músculo; séries, treinos, variação e duração por semana) e **Exercícios** (os filtros no topo; o que mudou do treino anterior para o último; exercícios sem evolução; evolução do exercício escolhido em carga e em repetições; recordes).
+- Os filtros são **um só elemento** (`actions.filters`), criado uma vez e posto pelas views no lugar certo de cada aba. Período: 4, 8, 12 semanas, 6 meses, 1 ano, todo o histórico ou "Personalizado" (campo numérico de 1 a 520 semanas; valor inválido volta ao anterior).
+- `site/js/data.js` tenta `data/dashboard.json` (dados reais, **no `.gitignore`**, nunca commitar) e, se não existir, usa `data/sample.json`. O 404 do primeiro no console é esperado. Uma etiqueta no topo diz "Seus dados" ou "Dados de exemplo".
+- Regras do site: texto dos dados entra no DOM por `textContent`/nós de texto, nunca `innerHTML`; todo gráfico tem a tabela equivalente (`card({ table })`); status (abaixo, dentro, acima, faltam, evoluindo...) sempre com ícone e texto; um eixo por gráfico (carga e repetições são dois gráficos); cores só pelas variáveis CSS, com valores para claro e escuro; um cartão só desenha depois de estar no documento (`card.render()`).
+- Os testes de navegador (`site/tests`, 44 verificações) sempre usam os dados de exemplo: o servidor de teste esconde `data/dashboard.json`. Além dos testes, **confira sempre as capturas de tela** (claro, escuro, 390 px): o código sozinho não mostra colisões de rótulos. O workflow publica uma **lista explícita de arquivos** (site + `sample.json`); nunca troque isso por copiar a pasta inteira.
+- `src/test/resources/fixtures/`: as 5 rotinas **fictícias** (PUSH, PUSH 2, PULL, PULL 2, LEGS) e os templates delas, no formato da API do Hevy, geradas por `SampleData`. O teste do volume planejado confere com uma conta feita à mão. Nunca coloque rotinas ou treinos reais aqui.
 
 ## Segredos
 
-- `HEVY_API_KEY`, a credencial da conta de serviço do Google e o ID da planilha vêm de variáveis de ambiente (secrets no GitHub Actions). Nunca vão para código, log, README ou commit.
-- O `.gitignore` já exclui `.env`, `secrets/`, `service-account*.json` e `credentials*.json`. Não ignorar `*.json` inteiro, porque as fixtures de teste são `.json`.
+- `HEVY_API_KEY`, a credencial da conta de serviço do Google e o ID da planilha vêm de variáveis de ambiente. Nunca vão para código, log, README ou commit.
+- O `.gitignore` já exclui `.env`, `secrets/`, `service-account*.json`, `credentials*.json` e `site/data/dashboard.json`. Não ignorar `*.json` inteiro, porque as fixtures de teste são `.json`.
