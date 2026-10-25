@@ -192,7 +192,7 @@ Arquitetura nova: Hevy API → Java (sincronização e cálculo) → Google Shee
 - Push = peito, ombros e tríceps. Pull = costas, bíceps, antebraço e trapézio. Pernas = quadríceps, posterior, glúteos e panturrilha. Core = abdômen. Superior = push + pull; inferior = pernas. É uma aproximação pelo músculo primário (o ombro conta como push mesmo em elevação lateral e crucifixo invertido).
 - Faixas de repetição: 1–5, 6–12 e 13 ou mais, só séries de trabalho.
 - Frequência de um músculo: dias distintos da semana com pelo menos uma série direta (indireta não conta).
-- Exercícios com o mesmo template ou o mesmo nome são um exercício só (o usuário tem duas versões de "Remada Iso-Lateral (Máquina)"). "Elevação Lateral (Halter)" e "Elevação Lateral (Halter) 1" têm nomes diferentes e continuam separados.
+- Exercícios com o mesmo template ou o mesmo nome são um exercício só: o usuário às vezes recria o template de um exercício, e o histórico não pode ficar dividido em dois. Nomes diferentes continuam separados (o código não adivinha que dois nomes são o mesmo exercício; o caminho é renomear no Hevy).
 
 **Resultado com dados reais:** a sincronização, as métricas e o site funcionam com o histórico completo do usuário; os números dele ficam só no computador dele.
 
