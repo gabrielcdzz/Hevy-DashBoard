@@ -50,10 +50,13 @@ class DashboardExporterTest {
     }
 
     @Test
-    void naoTemMaisOneRmNemFasesNemFaixasFixas() {
-        for (String palavra : new String[]{"oneRepMax", "one_rep_max", "bestOneRepMax", "cutting", "bulking",
-                "targets", "levels", "tonnage"}) {
+    void naoTemMaisOneRmNosExerciciosNemFasesNemFaixasFixas() {
+        // O 1RM existe só como tipo de recorde batido (prEvents), para a contagem do mês.
+        for (String palavra : new String[]{"oneRepMax", "bestOneRepMax", "cutting", "bulking", "targets", "levels", "tonnage"}) {
             assertFalse(texto.contains(palavra), "o arquivo não deveria mais conter \"" + palavra + "\"");
+        }
+        for (JsonNode exercicio : json.get("exercises")) {
+            assertFalse(exercicio.toString().contains("one_rep_max"), "o 1RM não aparece nos exercícios");
         }
     }
 
@@ -156,11 +159,14 @@ class DashboardExporterTest {
     }
 
     @Test
-    void recordesSaoSoDeCargaEDeRepeticoes() {
+    void recordesSaoDeCargaDeRepeticoesEDeOneRmParaContarOMes() {
         assertTrue(json.get("prEvents").size() > 20);
+        boolean achouOneRm = false;
         for (JsonNode evento : json.get("prEvents")) {
-            assertTrue(evento.get("type").asText().matches("weight|reps"), evento.toString());
+            assertTrue(evento.get("type").asText().matches("weight|reps|one_rep_max"), evento.toString());
+            achouOneRm |= evento.get("type").asText().equals("one_rep_max");
         }
+        assertTrue(achouOneRm, "os recordes de 1RM contam nos recordes do mês");
     }
 
     @Test

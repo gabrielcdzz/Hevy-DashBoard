@@ -166,8 +166,12 @@ async function main() {
   await page.click('#theme-btn');
   await wait(200);
 
-  const textoVisaoGeral = await pageText();
-  check('a Visão geral não fala de 1RM, cutting ou bulking', !/1RM|cutting|bulking/i.test(textoVisaoGeral));
+  // O 1RM é usado só para contar os recordes do mês: aparece no cartão "Recordes no mês" e em mais nenhum lugar.
+  const foraDoCartaoDeRecordes = await page.$$eval('#panel .card', (cards) => cards
+    .filter((c) => c.getAttribute('aria-label') !== 'Recordes no mês').map((c) => c.innerText).join(' '));
+  const cartaoDeRecordes = await page.$eval('.card[aria-label="Recordes no mês"]', (n) => n.innerText);
+  check('o cartão de recordes do mês cita o 1RM', cartaoDeRecordes.includes('1RM'), cartaoDeRecordes.replace(/\s+/g, ' '));
+  check('o 1RM não aparece em nenhum outro lugar da Visão geral, nem cutting ou bulking', !/1RM|cutting|bulking/i.test(foraDoCartaoDeRecordes));
 
   // ---------- exercícios ----------
   await page.click('[data-tab="exercicios"]');

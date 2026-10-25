@@ -60,7 +60,7 @@ function tilesGrid(model, current, previous) {
 
   return el('div', { class: 'grid col-8' },
     tile('Séries na semana', num(current.sets), model.plannedTotal > 0 ? `de ${num(model.plannedTotal)} planejadas` : '', setsNote, setsNoteClass),
-    tile('Recordes no mês', num(prsThisMonth), '', `${monthLong(d.today)}: carga ou repetições`),
+    tile('Recordes no mês', num(prsThisMonth), '', `${monthLong(d.today)}: carga, repetições ou 1RM`),
     tile('Semanas completas seguidas', num(d.consistency.currentStreakWeeks), '', `melhor sequência: ${num(d.consistency.bestStreakWeeks)} · meta: ${d.config.workoutsPerWeek} treinos por semana`),
     tile('Duração média do treino', recentDuration != null ? minutes(recentDuration) : '—', '',
       d.averageDurationMinutes != null ? `últimas 4 semanas · histórico: ${minutes(d.averageDurationMinutes)}` : ''));

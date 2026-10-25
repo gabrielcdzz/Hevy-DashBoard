@@ -12,8 +12,9 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
- * Evolução por exercício, sempre em carga e repetições (sem 1RM estimado): o que mudou de um treino para o
- * outro, os recordes pessoais e o alerta de estagnação.
+ * Evolução por exercício, sempre em carga e repetições: o que mudou de um treino para o outro, os recordes
+ * pessoais e o alerta de estagnação. O 1RM estimado ({@link OneRepMax}) só aparece como um tipo de recorde
+ * batido, para a contagem de recordes do mês; não entra na evolução nem nos recordes de cada exercício.
  * <p>
  * Um exercício é identificado pelo template do Hevy ou pelo nome (ver {@code groupByExercise}).
  * Só entram séries de trabalho com carga e repetições ({@link SetRecord#countsForStrength()}).
@@ -94,7 +95,9 @@ public final class ExerciseReport {
 
     public enum PrType {
         WEIGHT,
-        REPS
+        REPS,
+        /** Uma série que rendeu mais 1RM estimado que qualquer anterior. Só conta para os recordes do mês. */
+        ONE_REP_MAX
     }
 
     /** Um recorde batido em uma data. */
@@ -182,6 +185,7 @@ public final class ExerciseReport {
         List<SessionPoint> points = new ArrayList<>();
         Mark bestWeight = null;
         Mark bestReps = null;
+        double bestOneRepMax = 0;
         for (Map.Entry<LocalDate, List<SetRecord>> day : byDate.entrySet()) {
             LocalDate date = day.getKey();
             SessionPoint top = topSet(date, day.getValue());
@@ -189,6 +193,9 @@ public final class ExerciseReport {
 
             // O recorde de repetições vale para qualquer série do dia, não só para a mais pesada.
             int maxReps = day.getValue().stream().mapToInt(SetRecord::reps).max().orElseThrow();
+            double dayOneRepMax = day.getValue().stream()
+                    .mapToDouble(set -> OneRepMax.estimate(set.weightKg(), set.reps()))
+                    .max().orElseThrow();
 
             // A primeira sessão só estabelece a base: bater recorde exige ter um recorde anterior.
             if (bestWeight != null) {
@@ -198,7 +205,11 @@ public final class ExerciseReport {
                 if (maxReps > bestReps.value()) {
                     events.add(new PrEvent(date, templateId, latest.exercise(), PrType.REPS, maxReps));
                 }
+                if (dayOneRepMax > bestOneRepMax) {
+                    events.add(new PrEvent(date, templateId, latest.exercise(), PrType.ONE_REP_MAX, dayOneRepMax));
+                }
             }
+            bestOneRepMax = Math.max(bestOneRepMax, dayOneRepMax);
             bestWeight = better(bestWeight, top.weightKg(), date);
             bestReps = better(bestReps, maxReps, date);
         }

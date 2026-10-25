@@ -217,10 +217,35 @@ class ExerciseReportTest {
 
         List<ExerciseReport.PrEvent> eventos = ExerciseReport.build(series, HOJE, 3).prEvents();
 
+        // Na mesma data, a ordem segue a do enum: carga, repetições, 1RM. A carga sobe em 08/09 (65 x 8 rende
+        // 82,3 de 1RM contra 76) e as repetições sobem em 22/09 (60 x 12 rende 84).
         assertEquals(List.of(
                         List.of("2026-09-08", ExerciseReport.PrType.WEIGHT),
-                        List.of("2026-09-22", ExerciseReport.PrType.REPS)),
+                        List.of("2026-09-08", ExerciseReport.PrType.ONE_REP_MAX),
+                        List.of("2026-09-22", ExerciseReport.PrType.REPS),
+                        List.of("2026-09-22", ExerciseReport.PrType.ONE_REP_MAX)),
                 eventos.stream().map(e -> List.of(e.date().toString(), e.type())).toList());
+    }
+
+    @Test
+    void recordeDeOneRmSoAconteceQuandoASerieRendeMaisQueQualquerAnterior() {
+        List<SetRecord> series = List.of(
+                serie("supino", "Supino", "2026-09-01", 60, 8, true),    // 1RM 76
+                serie("supino", "Supino", "2026-09-08", 62.5, 5, true),  // carga sobe, mas rende 72,9: sem recorde de 1RM
+                serie("supino", "Supino", "2026-09-15", 57.5, 12, true)); // mais repetições e rende 80,5: recorde de 1RM
+
+        List<ExerciseReport.PrEvent> umRm = ExerciseReport.build(series, HOJE, 3).prEvents().stream()
+                .filter(e -> e.type() == ExerciseReport.PrType.ONE_REP_MAX).toList();
+
+        assertEquals(1, umRm.size());
+        assertEquals(LocalDate.of(2026, 9, 15), umRm.get(0).date());
+        assertEquals(57.5 * (1 + 12 / 30.0), umRm.get(0).value(), 1e-9);
+    }
+
+    @Test
+    void epleyUsaCargaVezesUmMaisRepeticoesSobreTrinta() {
+        assertEquals(76.0, OneRepMax.estimate(60, 8), 1e-9);
+        assertEquals(100.0 * (1 + 5 / 30.0), OneRepMax.estimate(100, 5), 1e-9);
     }
 
     // ------------------------------------------------------------------

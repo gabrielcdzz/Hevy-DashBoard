@@ -26,7 +26,7 @@ Um programa em Java que lê a API do Hevy, guarda cada série em uma planilha (p
 - **Sincronização incremental.** A cada execução o programa pede ao Hevy só os treinos que foram salvos, editados ou apagados desde a última vez. Importar um histórico de alguns anos (centenas de treinos) leva cerca de 30 segundos; as execuções seguintes, cerca de 10.
 - **Regras de contagem explícitas e testadas** (veja abaixo), com os números conferidos à mão contra o próprio Hevy.
 - **A meta de cada músculo vem das próprias rotinas.** O programa soma as séries diretas de cada músculo nas rotinas do Hevy: com 5 séries de peito planejadas, fazer 4 na semana é abaixo, 5 é dentro e 6 é acima. Na semana em andamento aparece "faltam 2", e não um alarme falso. Mudou a rotina no Hevy, a meta muda sozinha.
-- **Evolução em carga e repetições**, sem fórmulas de 1RM: compara a série mais pesada do último treino de cada exercício com a do treino anterior.
+- **Evolução em carga e repetições**: compara a série mais pesada do último treino de cada exercício com a do treino anterior. O 1RM estimado só serve para contar os recordes do mês.
 - **Configuração na própria planilha** (o que conta como série indireta e a meta de treinos por semana), sem mexer em código.
 - **Dashboard com duas abas**, filtros de período (4 semanas a todo o histórico, ou um número de semanas à sua escolha), músculo e exercício, modo claro e escuro, versão para celular e uma tabela equivalente para cada gráfico.
 
@@ -67,6 +67,7 @@ flowchart LR
 | Meta semanal de um músculo | As séries diretas dele somadas nas rotinas atuais. Abaixo, dentro (igual) ou acima. Na semana em andamento, menos que a meta aparece como "faltam N". |
 | Evolução de um exercício | A série mais pesada de cada treino. Subiu a carga: "aumentou a carga" (mesmo com menos repetições). Mesma carga e outras repetições: "mudou as repetições". |
 | Entra em recordes e na evolução | Séries de trabalho com carga e entre 1 e 50 repetições. Acima disso é tratado como erro de digitação (mas continua contando no volume). |
+| Recorde de 1RM estimado | Uma série que rende mais que qualquer anterior pela fórmula de Epley (`carga × (1 + repetições / 30)`). Só conta no cartão "Recordes no mês"; não aparece em nenhum outro lugar. |
 | Sem evolução | Nas últimas N semanas não subiu a carga, nem as repetições com a mesma carga, em relação às N semanas anteriores. |
 | Semana completa | Pelo menos a meta de treinos por semana (configurável). |
 
@@ -161,7 +162,7 @@ cd site/tests && npm ci && npm test   # testes de navegador (precisa do Google C
 - **Limite de requisições do Google.** Uma sincronização faz mais de 30 chamadas, e três execuções seguidas estouraram a cota por minuto. O cliente agora repete com espera crescente.
 - **Nomes de exercícios.** A API devolve os exercícios padrão em inglês, enquanto os treinos guardam o nome no idioma do app. Só os exercícios personalizados têm o nome atualizado pelo template (e é assim que renomear um exercício junta o histórico dele).
 - **A meta de séries vem das rotinas, não de faixas fixas.** Assim ela acompanha o que você realmente planejou, e o programa não precisa de uma tabela de metas para manter.
-- **Evolução sem 1RM.** Carga e repetições são o que se anota e o que se sente no treino; uma fórmula de estimativa só adicionava um número que não se usa. A comparação é feita com a série mais pesada de cada treino.
+- **Evolução sem 1RM.** Carga e repetições são o que se anota e o que se sente no treino; uma fórmula de estimativa só adicionava um número que não se usa. A comparação é feita com a série mais pesada de cada treino. A única exceção é a contagem de recordes do mês, que também considera os de 1RM estimado.
 - **Dados reais acham erros que o exemplo não acha.** Séries com 101 repetições (erro de digitação) distorciam os recordes; exercícios recriados com o mesmo nome dividiam o histórico em dois.
 
 ## Código próprio e de terceiros

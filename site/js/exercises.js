@@ -266,7 +266,8 @@ function recordsCard(model, list, actions) {
 
 function prCard(model, list) {
   const allowed = new Set(list.map((e) => e.name));
-  const events = model.data.prEvents.filter((p) => allowed.has(p.exercise)).slice(-8).reverse();
+  // O recorde de 1RM só conta no cartão "Recordes no mês"; esta lista mostra só carga e repetições.
+  const events = model.data.prEvents.filter((p) => allowed.has(p.exercise) && PR_TYPE[p.type]).slice(-8).reverse();
   return card({
     title: 'Recordes mais recentes',
     subtitle: 'Cada vez que uma carga ou um número de repetições passou o melhor anterior',
