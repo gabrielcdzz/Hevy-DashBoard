@@ -166,7 +166,7 @@ async function main() {
   await page.click('#theme-btn');
   await wait(200);
 
-  // O 1RM é usado só para contar os recordes do mês: aparece no cartão "Recordes no mês" e em mais nenhum lugar.
+  // O 1RM só é usado nos recordes: no cartão "Recordes no mês" (e, na aba de exercícios, na lista de recentes).
   const foraDoCartaoDeRecordes = await page.$$eval('#panel .card', (cards) => cards
     .filter((c) => c.getAttribute('aria-label') !== 'Recordes no mês').map((c) => c.innerText).join(' '));
   const cartaoDeRecordes = await page.$eval('.card[aria-label="Recordes no mês"]', (n) => n.innerText);
@@ -186,8 +186,10 @@ async function main() {
   check('as três listas de mudança existem', JSON.stringify(colunas) === JSON.stringify(['Aumentou a carga', 'Mesma carga, mudou as repetições', 'Diminuiu a carga']), colunas.join(' | '));
   check('o alerta de exercícios sem evolução continua', tExercicios.some((x) => /sem evolução/.test(x)));
   check('a evolução tem dois gráficos, carga e repetições', (await page.$$('canvas')).length === 2);
-  const textoExercicios = await pageText();
-  check('a aba de exercícios não fala de 1RM', !/1RM|1 RM|one rep/i.test(textoExercicios));
+  // Na aba de exercícios o 1RM só aparece na lista de recordes recentes.
+  const foraDosRecentes = await page.$$eval('#panel .card', (cards) => cards
+    .filter((c) => c.getAttribute('aria-label') !== 'Recordes mais recentes').map((c) => c.innerText).join(' '));
+  check('na aba de exercícios o 1RM só aparece nos recordes recentes', !/1RM|1 RM|one rep/i.test(foraDosRecentes));
 
   const evolucao = () => page.evaluate(() => [...document.querySelectorAll('#panel h2')].find((h) => h.textContent.startsWith('Evolução'))?.textContent);
   const antes = await evolucao();

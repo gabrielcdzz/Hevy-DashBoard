@@ -16,6 +16,7 @@ const TREND = {
 const PR_TYPE = {
   weight: { label: 'Maior carga', format: (v) => kg(v) },
   reps: { label: 'Mais repetições', format: (v) => `${num(v)} reps` },
+  one_rep_max: { label: 'Maior 1RM estimado', format: (v) => kg(v) },
 };
 
 export function buildExercises(model, state, actions) {
@@ -266,11 +267,10 @@ function recordsCard(model, list, actions) {
 
 function prCard(model, list) {
   const allowed = new Set(list.map((e) => e.name));
-  // O recorde de 1RM só conta no cartão "Recordes no mês"; esta lista mostra só carga e repetições.
-  const events = model.data.prEvents.filter((p) => allowed.has(p.exercise) && PR_TYPE[p.type]).slice(-8).reverse();
+  const events = model.data.prEvents.filter((p) => allowed.has(p.exercise)).slice(-8).reverse();
   return card({
     title: 'Recordes mais recentes',
-    subtitle: 'Cada vez que uma carga ou um número de repetições passou o melhor anterior',
+    subtitle: 'Cada vez que uma carga, um número de repetições ou o 1RM estimado passou o melhor anterior',
     cls: 'col-4',
     body(view) {
       if (events.length === 0) {
