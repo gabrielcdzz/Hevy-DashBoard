@@ -213,6 +213,16 @@ async function main() {
     .filter((c) => c.getAttribute('aria-label') !== 'Recordes mais recentes').map((c) => c.innerText).join(' '));
   check('na aba de exercícios o 1RM só aparece nos recordes recentes', !/1RM|1 RM|one rep/i.test(foraDosRecentes));
 
+  // A tabela de recordes vem ordenada pela tendência (sem evolução, evoluindo, sem base, fora do treino).
+  const ordemDasTendencias = await page.$$eval('table.data tbody tr', (linhas) => linhas
+    .filter((tr) => !tr.cells[0].textContent.includes('fora das rotinas'))
+    .map((tr) => tr.cells[2].textContent.replace(/^[^\p{L}]+/u, '').trim())); // tira o ícone colado ao texto
+  const ranking = { 'Sem evolução': 0, 'Evoluindo': 1, 'Sem base de comparação': 2, 'Fora do treino': 3 };
+  const posicoes = ordemDasTendencias.map((t) => ranking[t]);
+  check('a tabela de recordes está ordenada pela tendência',
+    posicoes.length > 5 && posicoes.every((p) => p !== undefined) && posicoes.every((p, i) => i === 0 || p >= posicoes[i - 1]),
+    [...new Set(ordemDasTendencias)].join(' → '));
+
   const evolucao = () => page.evaluate(() => [...document.querySelectorAll('#panel h2')].find((h) => h.textContent.startsWith('Evolução'))?.textContent);
   const antes = await evolucao();
   const linhas = await page.$$('table.data tbody tr');

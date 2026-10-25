@@ -13,6 +13,9 @@ const TREND = {
   no_baseline: { icon: '·', text: 'Sem base de comparação', cls: '' },
 };
 
+/** Ordem da tabela de recordes: primeiro o que pede atenção (sem evolução), depois quem está evoluindo. */
+const TREND_ORDER = { stagnant: 0, progressing: 1, no_baseline: 2, inactive: 3 };
+
 const PR_TYPE = {
   weight: { label: 'Maior carga', format: (v) => kg(v) },
   reps: { label: 'Mais repetições', format: (v) => `${num(v)} reps` },
@@ -232,11 +235,14 @@ function evolutionCard(model, state, exercise) {
 
 function recordsCard(model, list, actions) {
   const weeks = model.data.config.stagnationWeeks;
-  const sorted = [...list].sort((a, b) => Number(b.inRoutine) - Number(a.inRoutine) || a.name.localeCompare(b.name, 'pt-BR'));
+  // Exercícios das rotinas primeiro; dentro deles, ordenados pela tendência e depois pelo nome.
+  const sorted = [...list].sort((a, b) => Number(b.inRoutine) - Number(a.inRoutine)
+    || TREND_ORDER[a.trend.progress] - TREND_ORDER[b.trend.progress]
+    || a.name.localeCompare(b.name, 'pt-BR'));
 
   return card({
     title: 'Recordes pessoais e evolução',
-    subtitle: `Clique em uma linha para ver a evolução do exercício. "Tendência" compara as últimas ${weeks} semanas com as ${weeks} anteriores. Cada recorde mostra a primeira data em que foi alcançado.`,
+    subtitle: `Ordenados pela tendência: primeiro os sem evolução. Clique em uma linha para ver a evolução do exercício. "Tendência" compara as últimas ${weeks} semanas com as ${weeks} anteriores. Cada recorde mostra a primeira data em que foi alcançado.`,
     cls: 'col-12',
     body(view) {
       const rows = sorted.map((e) => {
