@@ -154,7 +154,7 @@ As abas `volume_*` nunca devem ser editadas à mão, porque o script as sobrescr
    - testes JUnit, incluindo um teste com as 5 rotinas que confira **exatamente** os números da seção 2, mais casos de borda: treino no domingo à noite em UTC, dropset e falha contam, aquecimento não conta, indireta só para bíceps e tríceps, dorsal e costas superiores agrupados
 3. ~~**Configurar o Google Cloud**~~ (feito em 24/10/2026; projeto `hevy-dashboard-512621`, conta de serviço `hevy-sync`, planilha "Hevy Dashboard", acesso confirmado pelo `Main`) (o usuário faz, com o Claude guiando passo a passo): criar o projeto, ativar a Google Sheets API, criar a conta de serviço, baixar a credencial JSON (que nunca vai para o repositório; deve ficar em `secrets/`), criar a planilha e compartilhar com o e-mail da conta de serviço.
 4. **Pacote `sheets`:** criar as abas se não existirem, escrever as séries brutas, ler `ajustes_manuais` e `config`, escrever as abas `volume_*`. Feito: conexão, `SyncState`, `series_treinos`. Falta: `series_rotinas`, `ajustes_manuais`, `config`, `volume_semanal`, `volume_rotinas`.
-5. **Orquestração (`SyncService` + `Main`):** importação completa na primeira vez, depois incremental, conforme a seção 5.
+5. ~~**Orquestração (`SyncService` + `Main`)**~~ (feito em 24/10/2026: `Main sync` importou os 800 treinos em 29 s e as execuções seguintes levam cerca de 11 s; o estado fica em `estado_sync`).
 6. **Workflow do GitHub Actions** e cadastro dos secrets.
 7. **Looker Studio, aba Visão geral:** diretas e indiretas por músculo × faixa-alvo, semana atual × anterior, treinos por semana, sequência de semanas completas, calendário de calor, duração média.
 8. **Abas Exercícios e Análise.** Os dados extras saem do script ou de campos calculados:
@@ -199,3 +199,11 @@ Arquitetura nova: Hevy API → Java (sincronização e cálculo) → Google Shee
 **Site (24/10/2026):** feito em HTML, CSS e JavaScript puros com Chart.js 4.4.7 (copiado para `site/vendor/`, sem CDN). Três abas (Visão geral, Exercícios, Análise), filtros de período, músculo e exercício, modo claro e escuro, versão para celular, e uma tabela equivalente para cada gráfico. Tem 17 verificações de comportamento feitas no Chrome (tooltips, filtros, tema, troca de aba, clique nas linhas), mais capturas de tela nos três modos. Os dados de exemplo são gerados por `Main sample` e ficam em `site/data/sample.json` (no Git); os reais vão em `site/data/dashboard.json` (no `.gitignore`).
 
 **Pendências do site:** (1) levar os testes de navegador de `scratchpad` para dentro do repositório (`site/tests`, com `puppeteer-core` e o caminho do Chrome por variável de ambiente) e rodá-los no GitHub Actions; (2) publicar no GitHub Pages pelo Actions; (3) o README com capturas de tela. Publicar os dados reais no site público só com confirmação do usuário.
+
+**Aprendizados da sincronização real (24/10/2026):**
+
+- O Google Sheets limita as requisições por minuto (erro 429). Uma execução faz mais de 30 chamadas, então o `SheetsClient` repete com espera crescente. Rodando de hora em hora o limite não é problema.
+- A API do Hevy devolve os exercícios padrão em inglês e os treinos guardam o nome no idioma do app. Só os exercícios personalizados têm o nome atualizado a partir do template (ver `SetRecords.withCurrentTemplates`).
+- Renomear um exercício no Hevy não gera evento de treino. O usuário renomeou a "Elevação Lateral (Halter) 1" para "Elevação Lateral (Halter)" e, com a atualização pelo template, o histórico dos dois ficou junto (272 sessões). A "Remada Iso-Lateral (Máquina)" tem 224.
+- Cardio, corpo inteiro e "outros" não são músculos: o site os esconde das listas de volume e do filtro de músculo.
+- Dados reais hoje: 53 exercícios com carga (21 nas rotinas atuais), 191 semanas, 14.799 séries.

@@ -47,4 +47,10 @@ public record SetRecord(
     public boolean countsForStrength() {
         return valid && weightKg != null && weightKg > 0 && reps != null && reps > 0 && reps <= MAX_PLAUSIBLE_REPS;
     }
+
+    /** A mesma série com outro nome de exercício e outros músculos (ver {@link SetRecords#withCurrentTemplates}). */
+    public SetRecord withTemplate(String newExercise, String newPrimaryMuscle, List<String> newSecondaryMuscles) {
+        return new SetRecord(workoutId, date, week, workoutTitle, durationMinutes, newExercise, templateId,
+                newPrimaryMuscle, newSecondaryMuscles, type, valid, weightKg, reps, rpe);
+    }
 }

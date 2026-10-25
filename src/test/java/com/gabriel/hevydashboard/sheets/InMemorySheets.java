@@ -8,9 +8,9 @@ import java.util.List;
 import java.util.Map;
 
 /** Planilha falsa, em memória, para testar sem chamar o Google. */
-class InMemorySheets implements SheetsGateway {
+public class InMemorySheets implements SheetsGateway {
 
-    final Map<String, List<List<String>>> sheets = new LinkedHashMap<>();
+    public final Map<String, List<List<String>>> sheets = new LinkedHashMap<>();
 
     @Override
     public void ensureSheets(Collection<String> titles) {

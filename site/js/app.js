@@ -1,7 +1,6 @@
 // Ponto de entrada do dashboard: carrega os dados, liga filtros, abas e tema, e desenha a aba ativa.
 import { loadData, buildModel, PERIODS, exercisesFor } from './data.js';
 import { el, hideTip } from './ui.js';
-import { fmtDate } from './format.js';
 import { buildOverview } from './overview.js';
 import { buildExercises } from './exercises.js';
 import { buildAnalysis } from './analysis.js';
@@ -28,7 +27,9 @@ async function main() {
   }
   const d = model.data;
 
-  $('meta').textContent = `Atualizado em ${fmtDate(d.generatedAt.slice(0, 10))}`;
+  // A hora vem em UTC; o navegador mostra no fuso de quem está olhando.
+  const generated = new Date(d.generatedAt);
+  $('meta').textContent = `Atualizado em ${generated.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}`;
   $('footer').textContent = d.sample
     ? 'Dados de exemplo gerados pelo projeto. Código aberto no GitHub.'
     : 'Dados sincronizados do Hevy.';

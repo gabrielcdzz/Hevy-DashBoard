@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  * Cliente da API do Hevy (somente leitura).
  * A chave vai no header "api-key" e nunca é escrita em log nem em mensagem de erro.
  */
-public class HevyClient {
+public class HevyClient implements HevySource {
 
     public static final String DEFAULT_BASE_URL = "https://api.hevyapp.com/v1";
 
@@ -87,16 +87,19 @@ public class HevyClient {
      * Treinos atualizados ou apagados desde {@code since}.
      * Para importar todo o histórico, use {@link Instant#EPOCH}.
      */
+    @Override
     public List<WorkoutEvent> getWorkoutEventsSince(Instant since) {
         return fetchAll("/workouts/events", Map.of("since", since.toString()), EVENTS_PAGE_SIZE,
                 Pages.WorkoutEventsPage.class, Pages.WorkoutEventsPage::pageCount, Pages.WorkoutEventsPage::events);
     }
 
+    @Override
     public List<Routine> getAllRoutines() {
         return fetchAll("/routines", Map.of(), ROUTINES_PAGE_SIZE,
                 Pages.RoutinesPage.class, Pages.RoutinesPage::pageCount, Pages.RoutinesPage::routines);
     }
 
+    @Override
     public List<ExerciseTemplate> getAllExerciseTemplates() {
         return fetchAll("/exercise_templates", Map.of(), TEMPLATES_PAGE_SIZE,
                 Pages.ExerciseTemplatesPage.class, Pages.ExerciseTemplatesPage::pageCount,

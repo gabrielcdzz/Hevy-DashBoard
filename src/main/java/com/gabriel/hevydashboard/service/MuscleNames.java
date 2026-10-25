@@ -22,7 +22,10 @@ public final class MuscleNames {
             Map.entry("calves", "Panturrilha"),
             Map.entry("abdominals", "Abdômen"),
             Map.entry("adductors", "Adutores"),
-            Map.entry("abductors", "Abdutores"));
+            Map.entry("abductors", "Abdutores"),
+            Map.entry("cardio", "Cardio"),
+            Map.entry("full_body", "Corpo inteiro"),
+            Map.entry("other", "Outros"));
 
     private MuscleNames() {
     }

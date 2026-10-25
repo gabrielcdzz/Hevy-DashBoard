@@ -17,6 +17,8 @@ export async function loadData() {
   throw new Error('Nenhum arquivo de dados foi encontrado em data/.');
 }
 
+const NOT_MUSCLES = new Set(['cardio', 'full_body', 'other']);
+
 export const PERIODS = [
   { value: 8, label: 'Últimas 8 semanas' },
   { value: 12, label: 'Últimas 12 semanas' },
@@ -33,7 +35,8 @@ export function buildModel(data) {
   }
 
   const seen = new Set(Object.keys(data.config.targets));
-  for (const row of data.volume) if (row.direct > 0) seen.add(row.muscle);
+  // Cardio e "corpo inteiro" não são músculos: não entram nas listas de volume nem no filtro de músculo.
+  for (const row of data.volume) if (row.direct > 0 && !NOT_MUSCLES.has(row.muscle)) seen.add(row.muscle);
   const muscles = [...seen].sort((a, b) => rank(a) - rank(b) || label(a).localeCompare(label(b), 'pt-BR'));
 
   function label(muscle) {

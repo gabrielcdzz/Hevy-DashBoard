@@ -41,6 +41,9 @@ public class SheetsClient implements SheetsGateway {
     /** Linhas por chamada de escrita, para o pedido não ficar grande demais com o histórico inteiro. */
     private static final int ROWS_PER_WRITE = 5000;
 
+    /** O limite do Google é por minuto, então as esperas somam cerca de um minuto: 2 s, 5 s, 15 s e 40 s. */
+    private static final long[] RETRY_DELAYS_MS = {2_000, 5_000, 15_000, 40_000};
+
     private final Sheets sheets;
     private final String spreadsheetId;
     private final String serviceAccountEmail;
@@ -221,14 +224,13 @@ public class SheetsClient implements SheetsGateway {
     // Internos
     // ------------------------------------------------------------------
 
-    private interface Call<T> {
-        T run() throws IOException;
-    }
-
-    /** Executa a chamada e troca os erros mais comuns por mensagens que dizem o que fazer. */
-    private <T> T execute(Call<T> call) {
+    /**
+     * Executa a chamada, repetindo-a quando a falha é passageira (limite de requisições por minuto, servidor
+     * ocupado, rede), e troca os erros definitivos mais comuns por mensagens que dizem o que fazer.
+     */
+    private <T> T execute(Retry.Call<T> call) {
         try {
-            return call.run();
+            return Retry.run(call, SheetsClient::isTransient, RETRY_DELAYS_MS, Retry::sleep);
         } catch (GoogleJsonResponseException e) {
             int status = e.getStatusCode();
             String message = switch (status) {
@@ -267,6 +269,15 @@ public class SheetsClient implements SheetsGateway {
 
     private static String inputOption(InputMode mode) {
         return mode == InputMode.RAW ? "RAW" : "USER_ENTERED";
+    }
+
+    /** 429 (limite de requisições) e 5xx (servidor) passam; erro de rede também. 403, 404 e 400 são definitivos. */
+    static boolean isTransient(IOException e) {
+        if (e instanceof GoogleJsonResponseException google) {
+            int status = google.getStatusCode();
+            return status == 429 || status >= 500;
+        }
+        return true;
     }
 
     /** Nome da aba entre aspas simples, como o Sheets exige quando há espaço ou acento. */

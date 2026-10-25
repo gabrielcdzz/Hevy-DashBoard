@@ -116,7 +116,8 @@ function evolutionCard(model, state, exercise) {
         height: 'tall',
         options: {
           layout: { padding: { right: 44 } },
-          scales: { y: { beginAtZero: false, ticks: { callback: (v) => `${v} kg` } } },
+          // grace afasta as linhas das bordas, senão uma carga constante fica escondida em cima do eixo
+          scales: { y: { beginAtZero: false, grace: '10%', ticks: { callback: (v) => `${num1(v)} kg` } } },
           plugins: {
             tooltip: {
               callbacks: {
@@ -148,7 +149,7 @@ function recordsCard(model, list, actions) {
 
   return card({
     title: 'Recordes pessoais e tendência',
-    subtitle: 'Clique em uma linha para ver a evolução do exercício. Cada recorde mostra a primeira data em que foi alcançado.',
+    subtitle: `Clique em uma linha para ver a evolução do exercício. "Recente" são as últimas ${weeks} semanas e "anterior", as ${weeks} antes delas. Cada recorde mostra a primeira data em que foi alcançado.`,
     cls: 'col-12',
     body(view) {
       const rows = sorted.map((e) => [
@@ -162,7 +163,7 @@ function recordsCard(model, list, actions) {
         fmtDateShort(e.lastTrained),
       ]);
       view.append(tableElement({
-        headers: ['Exercício', 'Tendência', `1RM últimas ${weeks} sem.`, `1RM ${weeks} sem. antes`, 'Maior carga', 'Mais repetições', 'Melhor 1RM', 'Último treino'],
+        headers: ['Exercício', 'Tendência', '1RM recente', '1RM anterior', 'Maior carga', 'Mais repetições', 'Melhor 1RM', 'Último treino'],
         rows,
         numeric: [2, 3],
         tall: true,

@@ -80,6 +80,8 @@ export function monthTick(labels, index) {
   const iso = labels[index];
   const prev = index > 0 ? labels[index - 1] : null;
   if (prev && prev.slice(0, 7) === iso.slice(0, 7)) return '';
+  // O primeiro rótulo some se o mês seguinte começa logo depois, senão os dois ficam colados.
+  if (index === 0 && labels[1] && labels[1].slice(0, 7) !== iso.slice(0, 7)) return '';
   const month = monthShort(iso);
   return iso.slice(5, 7) === '01' || index === 0 ? `${month}/${iso.slice(2, 4)}` : month;
 }

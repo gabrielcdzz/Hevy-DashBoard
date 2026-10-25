@@ -11,7 +11,7 @@ Documentação do projeto:
 - `docs/contexto.md`: decisões tomadas, regras de cálculo, **valores esperados para testes**, estrutura da planilha, lógica de sincronização e próximas etapas. Leia antes de começar uma etapa nova.
 - `docs/plano.md`: especificação original (abas e métricas do dashboard). Em caso de conflito, vale o `contexto.md`.
 
-Estado: cliente do Hevy, planilha, todas as métricas (`service`), exportação (`export`) e o site (`site/`) estão prontos e testados com dados de exemplo. Falta ligar os dados reais: o `SyncService` (sincronização incremental + exportação) no `Main`, o workflow do GitHub Actions que publica o site, e o README. `Main sample` gera os dados de exemplo; sem argumentos, o `Main` ainda só testa a conexão.
+Estado: tudo funciona de ponta a ponta com os dados reais do usuário (`Main sync` sincroniza o Hevy com a planilha e gera `site/data/dashboard.json`). Falta: o workflow do GitHub Actions (rodar `sync`, testar e publicar o site), levar os testes de navegador para dentro do repositório, e o README.
 
 ## Como trabalhar com o usuário
 
@@ -29,7 +29,9 @@ mvn test                                               # todos os testes
 mvn test -Dtest=HevyClientTest                         # uma classe
 mvn test -Dtest=HevyJsonTest#leEventoDeTreinoApagado   # um método
 mvn package                                            # gera target/hevy-dashboard-0.1.0-SNAPSHOT.jar (fat jar via shade)
-java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar     # precisa de HEVY_API_KEY, GOOGLE_APPLICATION_CREDENTIALS e SPREADSHEET_ID
+java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar sync     # Hevy -> planilha -> site/data/dashboard.json (precisa de HEVY_API_KEY, GOOGLE_APPLICATION_CREDENTIALS e SPREADSHEET_ID)
+java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar sample   # regenera site/data/sample.json (dados fictícios, vão para o Git)
+java -jar target/hevy-dashboard-0.1.0-SNAPSHOT.jar check    # só testa a conexão com o Hevy e a planilha
 ```
 
 ## Convenções de código
@@ -80,6 +82,13 @@ Pacotes: `client` (API do Hevy), `model`, `service` (cálculo de volume, **sem I
 - 1RM estimado pela fórmula de Epley: `carga × (1 + reps / 30)`.
 - A soma das diretas é sempre igual ao total de séries válidas. Os valores esperados das 5 rotinas estão em `docs/contexto.md` e devem virar teste.
 - O volume baixo de peito é proposital. Não tratar como alerta nem sugerir mudança.
+
+## Sincronização (`sync/`)
+
+- `sync/SyncService.run(arquivo)`: lê a data da última sincronização (`estado_sync`), pede ao Hevy os eventos desde então (`Instant.EPOCH` na primeira vez), aplica na aba `series_treinos`, **só então** grava a nova data, relê a aba inteira, carrega as configurações, calcula o volume planejado das rotinas e grava o arquivo do dashboard. Se qualquer passo falhar antes de gravar a data, a próxima execução refaz tudo, e como aplicar os mesmos eventos duas vezes não duplica nada, a planilha se corrige sozinha. O instante é anotado **antes** de buscar, para um treino salvo durante a execução não ser esquecido.
+- `client/HevySource` é a interface que o `SyncService` usa (o `HevyClient` a implementa); os testes usam `FakeHevy`, que responde só com os eventos posteriores ao instante pedido, como a API.
+- `SheetsClient` repete chamadas com falha passageira (429, 5xx, rede) com esperas de 2, 5, 15 e 40 s (`Retry`). O Google limita as requisições por minuto e uma execução faz mais de 30 chamadas; três execuções seguidas já estouraram o limite.
+- **Nomes de exercícios:** a API devolve os exercícios padrão em inglês ("Lat Pulldown (Machine)"), mas os treinos guardam o nome no idioma do app ("Puxada Alta (Máquina)"). Por isso `SetRecords.withCurrentTemplates` só troca o nome pelo do template nos exercícios **personalizados** (`isCustom`), que o usuário pode renomear; nos padrão mantém o gravado. Os músculos vêm sempre do template de hoje. Renomear um template não gera evento de treino, então sem isso o histórico antigo ficaria com o nome velho.
 
 ## Dashboard web (`site/`) e exportação (`export/`)
 

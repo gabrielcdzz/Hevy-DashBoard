@@ -108,7 +108,9 @@ class VolumeReportTest {
     void nomesEmPortuguesComReservaParaMusculoDesconhecido() {
         assertEquals("Posterior de coxa", MuscleNames.label("hamstrings"));
         assertEquals("Costas", MuscleNames.label("back"));
-        assertEquals("full body", MuscleNames.label("full_body"));
+        assertEquals("Cardio", MuscleNames.label("cardio"));
+        assertEquals("Corpo inteiro", MuscleNames.label("full_body"));
+        assertEquals("rotator cuff", MuscleNames.label("rotator_cuff")); // desconhecido: usa o nome do Hevy
     }
 
     // ------------------------------------------------------------------
