@@ -87,41 +87,77 @@ export function emptyMessage(text) {
 }
 
 // ---------- tooltip ----------
+//
+// Um mouse gera centenas de eventos de movimento por segundo. Por isso o conteúdo do tooltip só é reescrito
+// quando o mouse passa para outro elemento, e a posição é aplicada uma vez por quadro de tela. Reescrever o
+// conteúdo a cada movimento custa layout e, numa região "viva" (aria-live), vira um aviso para tecnologias
+// assistivas a cada vez, o que pode travar o navegador. O tooltip é só um reforço para o mouse: o mesmo conteúdo
+// está no aria-label do elemento e na tabela equivalente, então ele fica escondido dessas tecnologias.
 
 const tip = () => document.getElementById('tip');
 
+let shownFor = null;   // o elemento dono do conteúdo que está no tooltip agora
+let size = { w: 0, h: 0 };
+let pending = null;    // a última posição pedida, aplicada no próximo quadro
+let frame = 0;
+
 /** rows: [{ title }, { label, value }, { muted }] */
-export function showTip(event, rows) {
+function fill(rows) {
   const box = tip();
   box.replaceChildren(...rows.map((row) => {
     if (row.title) return el('div', { class: 't-title', text: row.title });
     if (row.muted) return el('div', { class: 't-muted', text: row.muted });
     return el('div', { class: 't-row' }, el('span', { text: row.label }), el('span', { text: row.value }));
   }));
-  box.classList.add('on');
+  size = { w: box.offsetWidth, h: box.offsetHeight }; // medido uma vez por conteúdo, não por movimento
+}
+
+function place() {
+  frame = 0;
+  if (!pending) return;
   const pad = 14;
-  const { innerWidth, innerHeight } = window;
-  const w = box.offsetWidth;
-  const h = box.offsetHeight;
-  let x = event.clientX + pad;
-  let y = event.clientY + pad;
-  if (x + w > innerWidth - 8) x = event.clientX - w - pad;
-  if (y + h > innerHeight - 8) y = event.clientY - h - pad;
+  const { x: pointerX, y: pointerY } = pending;
+  let x = pointerX + pad;
+  let y = pointerY + pad;
+  if (x + size.w > window.innerWidth - 8) x = pointerX - size.w - pad;
+  if (y + size.h > window.innerHeight - 8) y = pointerY - size.h - pad;
+  const box = tip();
   box.style.left = `${Math.max(8, x)}px`;
   box.style.top = `${Math.max(8, y)}px`;
+  pending = null;
+}
+
+/**
+ * Mostra o tooltip de `owner` perto de `point`. `rowsFn` só é chamada (e o conteúdo só é reescrito)
+ * quando o dono muda.
+ */
+export function showTip(owner, point, rowsFn) {
+  if (shownFor !== owner) {
+    fill(rowsFn());
+    shownFor = owner;
+  }
+  tip().classList.add('on');
+  pending = point;
+  if (!frame) frame = requestAnimationFrame(place);
 }
 
 export function hideTip() {
+  shownFor = null;
+  pending = null;
+  if (frame) {
+    cancelAnimationFrame(frame);
+    frame = 0;
+  }
   tip().classList.remove('on');
 }
 
-/** Liga o tooltip a um elemento: mouse, toque e foco do teclado mostram o mesmo conteúdo. */
+/** Liga o tooltip a um elemento: mouse e foco do teclado mostram o mesmo conteúdo. */
 export function attachTip(node, rowsFn) {
-  node.addEventListener('pointermove', (event) => showTip(event, rowsFn()));
+  node.addEventListener('pointermove', (event) => showTip(node, { x: event.clientX, y: event.clientY }, rowsFn));
   node.addEventListener('pointerleave', hideTip);
   node.addEventListener('focus', () => {
     const rect = node.getBoundingClientRect();
-    showTip({ clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 }, rowsFn());
+    showTip(node, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }, rowsFn);
   });
   node.addEventListener('blur', hideTip);
 }

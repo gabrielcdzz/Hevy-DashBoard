@@ -90,9 +90,31 @@ async function main() {
   await wait(100);
   let tip = await page.$eval('#tip', (n) => ({ on: n.classList.contains('on'), text: n.textContent }));
   check('tooltip da linha de volume aparece', tip.on && tip.text.includes('Planejado nas rotinas'), tip.text.slice(0, 60));
+  const posicao = await page.$eval('#tip', (n) => { const r = n.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, vw: innerWidth, vh: innerHeight }; });
+  check('o tooltip fica dentro da tela e tem tamanho', posicao.x >= 0 && posicao.y >= 0 && posicao.x + posicao.w <= posicao.vw && posicao.y + posicao.h <= posicao.vh && posicao.w > 50 && posicao.h > 20, JSON.stringify(posicao));
   await page.mouse.move(5, 5);
   await wait(100);
   check('tooltip some ao tirar o mouse', await page.$eval('#tip', (n) => !n.classList.contains('on')));
+
+  // Mover o mouse sobre o mesmo músculo não pode reescrever o tooltip a cada movimento: são centenas de eventos por
+  // segundo, e cada troca de conteúdo custa layout (e, numa região "viva", avisos para tecnologias assistivas).
+  const mutacoes = await page.evaluate(async () => {
+    const linhaDoMeio = document.querySelector('.vrow');
+    const r = linhaDoMeio.getBoundingClientRect();
+    let total = 0;
+    const observador = new MutationObserver((registros) => { total += registros.length; });
+    observador.observe(document.getElementById('tip'), { childList: true, subtree: true, characterData: true });
+    for (let i = 0; i < 200; i++) {
+      linhaDoMeio.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: r.left + 20 + (i % 100), clientY: r.top + 8 }));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    observador.disconnect();
+    linhaDoMeio.dispatchEvent(new PointerEvent('pointerleave'));
+    return total;
+  });
+  check('200 movimentos sobre o mesmo músculo reescrevem o tooltip no máximo uma vez', mutacoes <= 1, `${mutacoes} reescritas`);
+  check('o tooltip não é uma região viva (aria-live) e fica escondido das tecnologias assistivas',
+    await page.$eval('#tip', (n) => !n.hasAttribute('aria-live') && n.getAttribute('aria-hidden') === 'true'));
 
   const canvas = await page.$('canvas');
   await canvas.evaluate((n) => n.scrollIntoView({ block: 'center' })); // o gráfico fica abaixo da dobra
